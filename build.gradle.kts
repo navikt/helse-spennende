@@ -16,6 +16,7 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation("com.github.navikt:rapids-and-rivers:2022.01.19-09.53.b526ca84a9e4")
 
+    implementation("org.postgresql:postgresql:42.3.1")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.github.seratch:kotliquery:$kotliqueryVersion")
     implementation("org.flywaydb:flyway-core:$flywayVersion")
