@@ -1,4 +1,4 @@
 FROM navikt/java:17
 
-COPY backend/build/libs/*.jar ./
+COPY build/libs/*.jar ./
 
