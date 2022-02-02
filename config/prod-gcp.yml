@@ -1,0 +1,3 @@
+kafkaPool: nav-prod
+retentionHours: 3160
+replikeringSecretName: kafka-infotrygd-replikering-nav-prod-sh0x1jrh

@@ -1,0 +1,24 @@
+---
+apiVersion: kafka.nais.io/v1
+kind: Topic
+metadata:
+    name: infotrygd.replikering.v1
+    namespace: tbd
+    labels:
+        team: tbd
+spec:
+    pool: {{kafkaPool}}
+    config:  # optional; all fields are optional too; defaults shown
+        cleanupPolicy: delete  # delete, compact
+        minimumInSyncReplicas: 1
+        partitions: 10
+        replication: 3  # see min/max requirements
+        retentionBytes: -1  # -1 means unlimited
+        retentionHours: {{retentionHours}}  # -1 means unlimited
+    acl:
+        - team: tbd
+          application: spennende
+          access: read
+        - team: tbd
+          application: infotrygd-replikering
+          access: write
