@@ -7,9 +7,9 @@ repositories {
     maven("https://jitpack.io")
 }
 
-val flywayVersion = "8.4.1"
+val flywayVersion = "8.4.3"
 val hikariVersion = "5.0.1"
-val kotliqueryVersion = "1.6.0"
+val kotliqueryVersion = "1.6.1"
 val junitJupiterVersion = "5.8.2"
 
 dependencies {

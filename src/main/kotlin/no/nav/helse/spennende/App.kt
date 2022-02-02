@@ -7,6 +7,7 @@ import no.nav.helse.rapids_rivers.RapidsConnection
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
 import java.net.ConnectException
+import java.net.SocketException
 import javax.sql.DataSource
 import kotlin.reflect.KClass
 
@@ -68,14 +69,14 @@ private class DataSourceInitializer(private val hikariConfig: HikariConfig) : Ra
             dataSource = HikariDataSource(hikariConfig)
             return true
         } catch (err: Exception) {
-            err.allow(ConnectException::class)
+            err.allow(ConnectException::class, SocketException::class)
         }
         return false
     }
 
     private companion object {
-        fun Throwable.allow(clazz: KClass<out Throwable>) {
-            if (causes().any { clazz.isInstance(it) }) return
+        fun Throwable.allow(vararg clazz: KClass<out Throwable>) {
+            if (causes().any { cause -> clazz.any { clz -> clz.isInstance(cause) } }) return
             throw this
         }
 
