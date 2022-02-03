@@ -1,3 +1,3 @@
 kafkaPool: nav-dev
-retentionHours: 168
+retentionHours: 120
 replikeringSecretName: kafka-infotrygd-replikering-nav-dev-l439y395
