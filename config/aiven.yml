@@ -21,4 +21,4 @@ spec:
           access: read
         - team: tbd
           application: infotrygd-replikering
-          access: readwrite
+          access: write
