@@ -44,7 +44,7 @@ internal fun startApplication(rapidsConnection: RapidsConnection, env: Map<Strin
 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
-        // TODO add rivers
+        Infotrygdendringer(this)
     }.also { it.start() }
 }
 
