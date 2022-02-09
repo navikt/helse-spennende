@@ -1,0 +1,136 @@
+
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "INFOTRYGD_Q1.T_HENDELSE",
+  "description": "JSON schema for table INFOTRYGD_Q1.T_HENDELSE",
+  "definitions": {
+    "row": {
+      "type": "object",
+      "properties": {
+        "HENDELSE_ID": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "TYPE_HENDELSE": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "AKTOR_ID": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "TYPE_YTELSE": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "IDENTDATO": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "FOM": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "SATS": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "KOBLING_ID": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "BRUKERID": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "TIDSPUNKT_REG": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "OPPRETTET": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "OPPDATERT": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "DB_SPLITT": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "tokens": {
+      "type": "object",
+      "description": "Token keys and values are free form key value pairs.",
+      "properties": {
+      },
+      "additionalProperties": true
+    }
+  },
+  "type": "object",
+  "properties": {
+    "table": {
+      "description": "The MetaColumn table",
+      "type": "string"
+    },
+    "op_type": {
+      "description": "The MetaColumn op_type",
+      "type": "string"
+    },
+    "op_ts": {
+      "description": "The MetaColumn op_ts",
+      "type": "string"
+    },
+    "current_ts": {
+      "description": "The MetaColumn current_ts",
+      "type": "string"
+    },
+    "pos": {
+      "description": "The MetaColumn pos",
+      "type": "string"
+    },
+    "before": {
+      "$ref": "#/definitions/row"
+    },
+    "after": {
+      "$ref": "#/definitions/row"
+    }
+  },
+  "required": [
+    "table",
+    "op_type",
+    "op_ts",
+    "current_ts",
+    "pos"
+  ],
+  "additionalProperties": false
+}

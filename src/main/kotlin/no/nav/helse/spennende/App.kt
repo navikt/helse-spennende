@@ -2,8 +2,7 @@ package no.nav.helse.spennende
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import no.nav.helse.rapids_rivers.RapidApplication
-import no.nav.helse.rapids_rivers.RapidsConnection
+import no.nav.helse.rapids_rivers.*
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
 import java.net.ConnectException
@@ -13,35 +12,40 @@ import kotlin.reflect.KClass
 
 private val log = LoggerFactory.getLogger("no.nav.helse.spennende.App")
 
-private val env = System.getenv()
-private val hikariConfig = HikariConfig().apply {
-    jdbcUrl = String.format(
-        "jdbc:postgresql://%s:%s/%s?user=%s",
-        env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_HOST"),
-        env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PORT"),
-        env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_DATABASE"),
-        env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_USERNAME")
-    )
-    password = env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PASSWORD")
-    initializationFailTimeout = 5000
-    maximumPoolSize = 3
-    minimumIdle = 1
-    idleTimeout = 10001
-    connectionTimeout = 1000
-    maxLifetime = 30001
-}
-
-private val dataSourceInitializer = DataSourceInitializer(hikariConfig)
-// TODO: use repo for something
-private val repo = PostgresRepository(dataSourceInitializer::getDataSource)
-
-private val rapidsConnection = RapidApplication.create(env).apply {
-    register(dataSourceInitializer)
-    // TODO add rivers
+private val hikariConfig by lazy {
+    val env = System.getenv()
+    HikariConfig().apply {
+        jdbcUrl = String.format(
+            "jdbc:postgresql://%s:%s/%s?user=%s",
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_HOST"),
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PORT"),
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_DATABASE"),
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_USERNAME")
+        )
+        password = env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PASSWORD")
+        initializationFailTimeout = 5000
+        maximumPoolSize = 3
+        minimumIdle = 1
+        idleTimeout = 10001
+        connectionTimeout = 1000
+        maxLifetime = 30001
+    }
 }
 
 fun main() {
-    rapidsConnection.start()
+    val env = System.getenv()
+    startApplication(RapidApplication.create(env), env, hikariConfig)
+}
+
+internal fun startApplication(rapidsConnection: RapidsConnection, env: Map<String, String>, hikariConfig: HikariConfig): RapidsConnection {
+    val dataSourceInitializer = DataSourceInitializer(hikariConfig)
+    // TODO: use repo for something
+    val repo = PostgresRepository(dataSourceInitializer::getDataSource)
+
+    return rapidsConnection.apply {
+        register(dataSourceInitializer)
+        // TODO add rivers
+    }.also { it.start() }
 }
 
 private class PostgresRepository(dataSourceGetter: () -> DataSource) {
