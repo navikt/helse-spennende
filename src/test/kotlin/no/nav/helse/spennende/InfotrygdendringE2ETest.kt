@@ -1,5 +1,7 @@
 package no.nav.helse.spennende
 
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.module.kotlin.contains
 import com.zaxxer.hikari.HikariConfig
 import no.nav.helse.rapids_rivers.RapidsConnection
 import no.nav.helse.rapids_rivers.testsupport.TestRapid
@@ -7,6 +9,7 @@ import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.*
 
 internal class InfotrygdendringE2ETest {
     private val rapid = TestRapid()
@@ -28,7 +31,24 @@ internal class InfotrygdendringE2ETest {
 
     @Test
     fun `create test message`() {
+        val fnr = UUID.randomUUID().toString()
+        val aktørId = UUID.randomUUID().toString()
+
         rapid.sendTestMessage(createTestMessage())
+        rapid.sendTestMessage((rapid.inspektør.message(0) as ObjectNode).apply {
+            putObject("@løsning").apply {
+                putObject("HentIdenter").apply {
+                    put("fødselsnummer", fnr)
+                    put("aktørId", aktørId)
+                }
+            }
+        }.toString())
+        val utgående = rapid.inspektør.message(1)
+
+        assertTrue(utgående.contains("@id"))
+        assertEquals("infotrygdendring", utgående.path("@event_name").asText())
+        assertEquals(fnr, utgående.path("fødselsnummer").asText())
+        assertEquals(aktørId, utgående.path("aktørId").asText())
     }
 
     @Language("JSON")
