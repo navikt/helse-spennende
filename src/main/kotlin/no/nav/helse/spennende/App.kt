@@ -2,13 +2,12 @@ package no.nav.helse.spennende
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import no.nav.helse.rapids_rivers.*
+import no.nav.helse.rapids_rivers.RapidApplication
+import no.nav.helse.rapids_rivers.RapidsConnection
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
-import java.net.ConnectException
-import java.net.SocketException
+import java.time.Duration
 import javax.sql.DataSource
-import kotlin.reflect.KClass
 
 private val log = LoggerFactory.getLogger("no.nav.helse.spennende.App")
 
@@ -23,12 +22,10 @@ private val hikariConfig by lazy {
             env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_USERNAME")
         )
         password = env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PASSWORD")
-        initializationFailTimeout = 5000
-        maximumPoolSize = 3
-        minimumIdle = 1
-        idleTimeout = 10001
-        connectionTimeout = 1000
-        maxLifetime = 30001
+        maximumPoolSize = 1
+        connectionTimeout = Duration.ofSeconds(5).toMillis()
+        maxLifetime = Duration.ofMinutes(30).toMillis()
+        initializationFailTimeout = Duration.ofMinutes(1).toMillis()
     }
 }
 
@@ -40,7 +37,7 @@ fun main() {
 internal fun startApplication(rapidsConnection: RapidsConnection, env: Map<String, String>, hikariConfig: HikariConfig): RapidsConnection {
     val dataSourceInitializer = DataSourceInitializer(hikariConfig)
     // TODO: use repo for something
-    val repo = PostgresRepository(dataSourceInitializer::getDataSource)
+    val repo = PostgresRepository(dataSourceInitializer::dataSource)
 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
@@ -53,48 +50,20 @@ private class PostgresRepository(dataSourceGetter: () -> DataSource) {
 }
 
 private class DataSourceInitializer(private val hikariConfig: HikariConfig) : RapidsConnection.StatusListener {
-    private lateinit var dataSource: DataSource
-
-    fun getDataSource(): DataSource {
-        check(this::dataSource.isInitialized) { "The data source has not been initialized yet!" }
-        return dataSource
-    }
+    internal val dataSource: DataSource by lazy { HikariDataSource(hikariConfig) }
 
     override fun onStartup(rapidsConnection: RapidsConnection) {
-        while (!initializeDataSource()) {
-            log.info("Database is not available yet, trying again")
-            Thread.sleep(250)
-        }
         migrate(dataSource)
     }
 
-    private fun initializeDataSource(): Boolean {
-        try {
-            dataSource = HikariDataSource(hikariConfig)
-            return true
-        } catch (err: Exception) {
-            err.allow(ConnectException::class, SocketException::class)
-        }
-        return false
-    }
-
     private companion object {
-        fun Throwable.allow(vararg clazz: KClass<out Throwable>) {
-            if (causes().any { cause -> clazz.any { clz -> clz.isInstance(cause) } }) return
-            throw this
-        }
-
-        fun Throwable.causes(): List<Throwable> {
-            return mutableListOf<Throwable>(this).apply {
-                var nextError: Throwable? = cause
-                while (nextError != null) {
-                    add(nextError)
-                    nextError = nextError.cause
-                }
-            }
-        }
         fun migrate(dataSource: DataSource) {
-            Flyway.configure().dataSource(dataSource).load().migrate()
+            Flyway
+                .configure()
+                .dataSource(dataSource)
+                .lockRetryCount(-1)
+                .load()
+                .migrate()
         }
     }
 }
