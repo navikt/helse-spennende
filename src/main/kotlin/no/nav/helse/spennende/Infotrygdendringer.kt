@@ -38,6 +38,7 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection) {
             packet["@id"] = UUID.randomUUID()
             packet["@event_name"] = "infotrygdendring_uten_fnr"
             packet["@opprettet"] = LocalDateTime.now()
+            packet["@behovId"] = UUID.randomUUID()
             packet["@behov"] = listOf("HentIdenter")
             packet["ident"] = aktørId
             logger.info("leste infotrygdendring, sender behov for å finne identer:\n${packet.toJson()}")
