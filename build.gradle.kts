@@ -14,7 +14,7 @@ val junitJupiterVersion = "5.8.2"
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("com.github.navikt:rapids-and-rivers:2022.03.20-08.39.e957b9917a89")
+    implementation("com.github.navikt:rapids-and-rivers:2022.03.28-20.54.89f957fff8f2")
 
     implementation("org.postgresql:postgresql:42.3.1")
     implementation("com.zaxxer:HikariCP:$hikariVersion")

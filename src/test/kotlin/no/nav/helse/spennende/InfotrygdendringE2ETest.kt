@@ -17,7 +17,7 @@ internal class InfotrygdendringE2ETest {
 
 
     private companion object {
-        private const val aktørId = "aktørId"
+        private const val fnr = "12345678911"
     }
 
     @BeforeEach
@@ -53,27 +53,24 @@ internal class InfotrygdendringE2ETest {
 
     @Language("JSON")
     private fun createTestMessage() = """{
-  "table": "INFOTRYGD_Q1.T_HENDELSE",
+  "table": "INFOTRYGD_Q1.TIL_VL_HENDELSE_SP",
   "op_type": "I",
-  "op_ts": "2022-02-08 06:35:12.000000",
-  "current_ts": "2022-02-08 21:56:45.470000",
-  "pos": "00000000380000013863",
+  "op_ts": "2022-03-29 12:54:11.000000",
+  "current_ts": "2022-03-29 13:14:27.396000",
+  "pos": "00000000430000005465",
   "after": {
     "HENDELSE_ID": 12345678,
-    "TYPE_HENDELSE": "INNVILGET      ",
-    "AKTOR_ID": "$aktørId       ",
-    "TYPE_YTELSE": "SP",
-    "IDENTDATO": "20211101",
-    "FOM": "2021-11-01 00:00:00",
-    "SATS": 0,
-    "KOBLING_ID": 0,
-    "BRUKERID": "ZZZ1234 ",
-    "TIDSPUNKT_REG": "2022-02-08 06:34:59.974950000",
-    "OPPRETTET": "2022-02-08 06:35:05.462228000",
-    "OPPDATERT": "2022-02-08 06:35:05.462228000",
-    "DB_SPLITT": "  "
-  },
-  "system_read_count": 0
+    "F_NR": "$fnr",
+    "F_NR_SNUDD": "123456789",
+    "TK_NR": "0315",
+    "REGION": "2",
+    "TABELLNAVN": "IS_UTBETALING_15",
+    "KOLONNENAVN": " ",
+    "KILDE_IS": "K222PBS3    ",
+    "TABLE_ROW_ID": 92526463,
+    "MOTTATT": "2022-03-29 12:54:03.190867000",
+    "SENDT_KAFKA": "2022-03-29 12:54:03.190867000"
+  }
 }
 """
 }
