@@ -13,9 +13,9 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection) {
         River(rapidsConnection).apply {
             validate {
                 it.rejectKey("@event_name", "@behov")
-                it.demandKey("table")
-                it.requireKey("op_type", "op_ts", "current_ts", "pos",
-                    "after.HENDELSE_ID", "after.F_NR", "after.TABELLNAVN")
+                it.demandKey("after.F_NR")
+                it.requireKey("table", "op_type", "op_ts", "current_ts", "pos",
+                    "after.HENDELSE_ID", "after.TABELLNAVN")
             }
         }.register(InfotrygdendringerUtenAktørId())
         River(rapidsConnection).apply {
