@@ -15,7 +15,7 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection) {
                 it.rejectKey("@event_name", "@behov")
                 it.demandKey("table")
                 it.requireKey("op_type", "op_ts", "current_ts", "pos",
-                    "after.HENDELSE_ID", "after.F_NR", "after.TABELLNAVN", "after.MOTTATT", "after.SENDT_KAFKA")
+                    "after.HENDELSE_ID", "after.F_NR", "after.TABELLNAVN")
             }
         }.register(InfotrygdendringerUtenAktørId())
         River(rapidsConnection).apply {
@@ -25,7 +25,7 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection) {
                 it.requireKey("@løsning.HentIdenter.fødselsnummer", "@løsning.HentIdenter.aktørId")
                 it.requireKey("@id", "@opprettet")
                 it.requireKey("table", "op_type", "op_ts", "current_ts", "pos",
-                    "after.HENDELSE_ID", "after.F_NR", "after.TABELLNAVN", "after.MOTTATT", "after.SENDT_KAFKA")
+                    "after.HENDELSE_ID", "after.F_NR", "after.TABELLNAVN")
             }
         }.register(InfotrygdendringerMedAktør())
     }

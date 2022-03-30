@@ -67,9 +67,7 @@ internal class InfotrygdendringE2ETest {
     "TABELLNAVN": "IS_UTBETALING_15",
     "KOLONNENAVN": " ",
     "KILDE_IS": "K222PBS3    ",
-    "TABLE_ROW_ID": 92526463,
-    "MOTTATT": "2022-03-29 12:54:03.190867000",
-    "SENDT_KAFKA": "2022-03-29 12:54:03.190867000"
+    "TABLE_ROW_ID": 92526463
   }
 }
 """
