@@ -35,6 +35,7 @@ spec:
       - type: POSTGRES_12
         databases:
           - name: spennende
+            cascadingDelete: true
   kafka:
     pool: {{kafkaPool}}
   env:
