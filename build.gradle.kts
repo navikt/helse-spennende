@@ -11,6 +11,7 @@ val flywayVersion = "8.4.3"
 val hikariVersion = "5.0.1"
 val kotliqueryVersion = "1.6.1"
 val junitJupiterVersion = "5.8.2"
+val testcontainersVersion = "1.16.2"
 
 dependencies {
     implementation(kotlin("stdlib"))
@@ -20,6 +21,10 @@ dependencies {
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.github.seratch:kotliquery:$kotliqueryVersion")
     implementation("org.flywaydb:flyway-core:$flywayVersion")
+
+    testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
+    testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
+    testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")

@@ -36,17 +36,11 @@ fun main() {
 
 internal fun startApplication(rapidsConnection: RapidsConnection, env: Map<String, String>, hikariConfig: HikariConfig): RapidsConnection {
     val dataSourceInitializer = DataSourceInitializer(hikariConfig)
-    // TODO: use repo for something
     val repo = PostgresRepository(dataSourceInitializer::dataSource)
-
     return rapidsConnection.apply {
         register(dataSourceInitializer)
-        Infotrygdendringer(this)
+        Infotrygdendringer(this, repo)
     }.also { it.start() }
-}
-
-private class PostgresRepository(dataSourceGetter: () -> DataSource) {
-    private val dataSource by lazy(dataSourceGetter)
 }
 
 private class DataSourceInitializer(private val hikariConfig: HikariConfig) : RapidsConnection.StatusListener {
