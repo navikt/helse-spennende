@@ -32,10 +32,14 @@ spec:
     enabled: true
   gcp:
     sqlInstances:
-      - type: POSTGRES_12
+      - type: POSTGRES_14
+        name: spennende_v2
+        diskAutoresize: true
+        diskSize: 100
+        diskType: SSD
+        tier: db-custom-32-131072
         databases:
           - name: spennende
-            cascadingDelete: true
   kafka:
     pool: {{kafkaPool}}
   env:
