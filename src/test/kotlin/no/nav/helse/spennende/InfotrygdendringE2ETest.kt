@@ -6,11 +6,11 @@ import com.zaxxer.hikari.HikariConfig
 import no.nav.helse.rapids_rivers.RapidsConnection
 import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import java.util.*
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class InfotrygdendringE2ETest {
     private val rapid = TestRapid()
     private lateinit var app: RapidsConnection
@@ -20,21 +20,46 @@ internal class InfotrygdendringE2ETest {
         private const val fnr = "12345678911"
     }
 
+    private lateinit var repository: PostgresRepository
+
+    @BeforeAll
+    fun createDatabase() {
+        PgDb.start()
+        repository = PostgresRepository { PgDb.connection() }
+    }
+
+    @AfterEach
+    fun resetSchema() {
+        PgDb.reset()
+    }
+
     @BeforeEach
     fun setup() {
         val env = mapOf(
             "LOCAL_DEVELOPMENT" to "true"
         )
-        app = startApplication(rapid, env, HikariConfig())
+        app = startApplication(rapid, env, PgDb.config())
         rapid.reset()
     }
 
     @Test
     fun `create test message`() {
+        rapid.sendTestMessage(createTestMessage())
+        assertEquals(1, rapid.inspektør.size)
+        assertLøsning()
+    }
+
+    @Test
+    fun `rate limit`() {
+        repeat(10) { rapid.sendTestMessage(createTestMessage()) }
+        assertEquals(1, rapid.inspektør.size)
+        assertLøsning()
+    }
+
+    private fun assertLøsning() {
         val fnr = UUID.randomUUID().toString()
         val aktørId = UUID.randomUUID().toString()
 
-        rapid.sendTestMessage(createTestMessage())
         rapid.sendTestMessage((rapid.inspektør.message(0) as ObjectNode).apply {
             putObject("@løsning").apply {
                 putObject("HentIdenter").apply {
