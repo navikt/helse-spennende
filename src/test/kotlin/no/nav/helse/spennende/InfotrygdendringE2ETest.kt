@@ -2,7 +2,6 @@ package no.nav.helse.spennende
 
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.contains
-import com.zaxxer.hikari.HikariConfig
 import no.nav.helse.rapids_rivers.RapidsConnection
 import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
@@ -38,7 +37,7 @@ internal class InfotrygdendringE2ETest {
         val env = mapOf(
             "LOCAL_DEVELOPMENT" to "true"
         )
-        app = startApplication(rapid, env, PgDb.config())
+        app = startApplication(rapid, PgDb.config())
         rapid.reset()
     }
 

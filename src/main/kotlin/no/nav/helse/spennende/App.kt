@@ -31,10 +31,10 @@ private val hikariConfig by lazy {
 
 fun main() {
     val env = System.getenv()
-    startApplication(RapidApplication.create(env), env, hikariConfig)
+    startApplication(RapidApplication.create(env), hikariConfig)
 }
 
-internal fun startApplication(rapidsConnection: RapidsConnection, env: Map<String, String>, hikariConfig: HikariConfig): RapidsConnection {
+internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: HikariConfig): RapidsConnection {
     val dataSourceInitializer = DataSourceInitializer(hikariConfig)
     val repo = PostgresRepository(dataSourceInitializer::dataSource)
     return rapidsConnection.apply {

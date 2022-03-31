@@ -1,5 +1,6 @@
 package no.nav.helse.spennende
 
+import io.prometheus.client.Counter
 import net.logstash.logback.argument.StructuredArguments.keyValue
 import no.nav.helse.rapids_rivers.*
 import org.slf4j.LoggerFactory
@@ -11,6 +12,19 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection, repo: Post
     private companion object {
         private val logger = LoggerFactory.getLogger("tjenestekall")
         private val ratebegrensning = Duration.ofMinutes(1)
+        private const val RATE_BEGRENSET = "1"
+        private const val IKKE_RATE_BEGRENSET = "0"
+        private val endringer = Counter
+            .build()
+            .name("infotrygdendringer")
+            .labelNames("ratebegrenset")
+            .help("Teller alle innkommende infotrygdendringer, og angir hvorvidt de er rate-begrenset (1) eller ikke (0). Ikke-ratebegrensede endringer sendes videre for å mappe fnr til aktørId")
+            .register()
+        private val publiserteEndringer = Counter
+            .build()
+            .name("publiserte_infotrygdendringer")
+            .help("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
+            .register()
     }
     init {
         River(rapidsConnection).apply {
@@ -50,8 +64,12 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection, repo: Post
         }
 
         private fun republiser(endringsmeldingId: Long, fnr: String, packet: JsonMessage, context: MessageContext) {
-            if (!repo.skalRepublisere(endringsmeldingId, ratebegrensning)) return logger.info("republiserer ikke {} for {} pga rate-begrensning",
-                keyValue("endringsmeldingId", endringsmeldingId), keyValue("fnr", fnr))
+            if (!repo.skalRepublisere(endringsmeldingId, ratebegrensning)) {
+                endringer.labels(RATE_BEGRENSET).inc()
+                return logger.info("republiserer ikke {} for {} pga rate-begrensning",
+                    keyValue("endringsmeldingId", endringsmeldingId), keyValue("fnr", fnr))
+            }
+            endringer.labels(IKKE_RATE_BEGRENSET).inc()
             packet["@id"] = UUID.randomUUID()
             packet["@event_name"] = "infotrygdendring_uten_aktør"
             packet["@opprettet"] = LocalDateTime.now()
@@ -77,6 +95,7 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection, repo: Post
             ))
             val utgående = message.toJson()
             if (!repo.lagreUtgåendeMelding(endringsmeldingId, utgående)) return logger.error("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående", keyValue("endringsmeldingId", endringsmeldingId), keyValue("fnr", fnr))
+            publiserteEndringer.inc()
             logger.info("republiserer infotrygdendring med fnr:\n$utgående")
             context.publish(fnr, utgående)
         }
