@@ -39,6 +39,7 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection, repo: Post
             validate {
                 it.demandValue("@event_name", "infotrygdendring_uten_aktør")
                 it.demandKey("@løsning.HentIdenter")
+                it.demandValue("@final", true)
                 it.requireKey("@løsning.HentIdenter.fødselsnummer", "@løsning.HentIdenter.aktørId")
                 it.requireKey("@id", "@opprettet", "endringsmeldingId")
                 it.requireKey("table", "op_type", "op_ts", "current_ts", "pos",
@@ -96,7 +97,7 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection, repo: Post
             val utgående = message.toJson()
             if (!repo.lagreUtgåendeMelding(endringsmeldingId, utgående)) return logger.error("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående", keyValue("endringsmeldingId", endringsmeldingId), keyValue("fnr", fnr))
             publiserteEndringer.inc()
-            logger.info("republiserer infotrygdendring med fnr:\n$utgående")
+            logger.info("republiserer infotrygdendring med fnr:\n\t$utgående\n\nInnkommende:\n\t${packet.toJson()}")
             context.publish(fnr, utgående)
         }
 

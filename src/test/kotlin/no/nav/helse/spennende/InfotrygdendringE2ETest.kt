@@ -1,5 +1,6 @@
 package no.nav.helse.spennende
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.contains
 import no.nav.helse.rapids_rivers.RapidsConnection
@@ -49,6 +50,16 @@ internal class InfotrygdendringE2ETest {
     }
 
     @Test
+    fun `reagerer ikke på behov med løsning uten @final`() {
+        rapid.sendTestMessage(createTestMessage())
+        assertEquals(1, rapid.inspektør.size)
+        rapid.sendTestMessage(rapid.inspektør.message(0).medLøsning(fnr, "aktørid").apply {
+            remove("@final")
+        }.toString())
+        assertEquals(1, rapid.inspektør.size)
+    }
+
+    @Test
     fun `rate limit`() {
         repeat(10) { rapid.sendTestMessage(createTestMessage()) }
         assertEquals(1, rapid.inspektør.size)
@@ -58,21 +69,23 @@ internal class InfotrygdendringE2ETest {
     private fun assertLøsning() {
         val fnr = UUID.randomUUID().toString()
         val aktørId = UUID.randomUUID().toString()
-
-        rapid.sendTestMessage((rapid.inspektør.message(0) as ObjectNode).apply {
-            putObject("@løsning").apply {
-                putObject("HentIdenter").apply {
-                    put("fødselsnummer", fnr)
-                    put("aktørId", aktørId)
-                }
-            }
-        }.toString())
+        rapid.sendTestMessage(rapid.inspektør.message(0).medLøsning(fnr, aktørId).toString())
         val utgående = rapid.inspektør.message(1)
 
         assertTrue(utgående.contains("@id"))
         assertEquals("infotrygdendring", utgående.path("@event_name").asText())
         assertEquals(fnr, utgående.path("fødselsnummer").asText())
         assertEquals(aktørId, utgående.path("aktørId").asText())
+    }
+
+    private fun JsonNode.medLøsning(fnr: String, aktørId: String) = (this as ObjectNode).apply {
+        putObject("@løsning").apply {
+            putObject("HentIdenter").apply {
+                put("fødselsnummer", fnr)
+                put("aktørId", aktørId)
+            }
+        }
+        put("@final", true)
     }
 
     @Language("JSON")
