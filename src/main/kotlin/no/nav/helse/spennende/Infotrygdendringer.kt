@@ -17,8 +17,8 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection, repo: Post
         private val endringer = Counter
             .build()
             .name("infotrygdendringer")
-            .labelNames("ratebegrenset")
-            .help("Teller alle innkommende infotrygdendringer, og angir hvorvidt de er rate-begrenset (1) eller ikke (0). Ikke-ratebegrensede endringer sendes videre for å mappe fnr til aktørId")
+            .labelNames("tabellnavn", "ratebegrenset")
+            .help("Teller alle innkommende infotrygdendringer, og angir tabellnavn og hvorvidt de er rate-begrenset (1) eller ikke (0). Ikke-ratebegrensede endringer sendes videre for å mappe fnr til aktørId")
             .register()
         private val publiserteEndringer = Counter
             .build()
@@ -66,11 +66,11 @@ internal class Infotrygdendringer(rapidsConnection: RapidsConnection, repo: Post
 
         private fun republiser(endringsmeldingId: Long, fnr: String, packet: JsonMessage, context: MessageContext) {
             if (!repo.skalRepublisere(endringsmeldingId, ratebegrensning)) {
-                endringer.labels(RATE_BEGRENSET).inc()
+                endringer.labels(packet["after.TABELLNAVN"].asText(), RATE_BEGRENSET).inc()
                 return logger.info("republiserer ikke {} for {} pga rate-begrensning",
                     keyValue("endringsmeldingId", endringsmeldingId), keyValue("fnr", fnr))
             }
-            endringer.labels(IKKE_RATE_BEGRENSET).inc()
+            endringer.labels(packet["after.TABELLNAVN"].asText(), IKKE_RATE_BEGRENSET).inc()
             packet["@id"] = UUID.randomUUID()
             packet["@event_name"] = "infotrygdendring_uten_aktør"
             packet["@opprettet"] = LocalDateTime.now()
