@@ -15,7 +15,7 @@ val testcontainersVersion = "1.16.2"
 
 dependencies {
     implementation(kotlin("stdlib"))
-    implementation("com.github.navikt:rapids-and-rivers:2022.04.05-08.01.237f724ae572")
+    implementation("com.github.navikt:rapids-and-rivers:2022.04.05-09.40.11a466d7ac70")
 
     implementation("org.postgresql:postgresql:42.3.1")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
