@@ -52,7 +52,6 @@ jobs:
       matrix:
         cluster:
           - dev-gcp
-          - prod-gcp
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

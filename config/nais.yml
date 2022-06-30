@@ -35,9 +35,9 @@ spec:
       - type: POSTGRES_14
         name: spennende-v2
         diskAutoresize: true
-        diskSize: 100
+        diskSize: 20
         diskType: SSD
-        tier: db-custom-32-131072
+        tier: {{sqlInstancesTier}}
         databases:
           - name: spennende
   kafka:
