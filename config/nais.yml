@@ -35,7 +35,7 @@ spec:
       - type: POSTGRES_14
         name: spennende-v2
         diskAutoresize: true
-        diskSize: 20
+        diskSize: 100
         diskType: SSD
         tier: {{sqlInstancesTier}}
         databases:
