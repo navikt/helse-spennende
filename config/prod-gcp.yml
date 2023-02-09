@@ -1,4 +1,4 @@
 kafkaPool: nav-prod
 retentionHours: 3600
 replikeringSecretName: kafka-infotrygd-replikering-nav-prod-sh0x1jrh
-sqlInstancesTier: db-custom-10-52645
+sqlInstancesTier: db-custom-10-52480
