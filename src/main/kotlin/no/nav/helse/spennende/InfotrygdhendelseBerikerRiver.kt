@@ -26,12 +26,14 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
         val fnr = packet["@løsning.HentIdenter.fødselsnummer"].asText()
         val aktørId = packet["@løsning.HentIdenter.aktørId"].asText()
 
+
         val message = JsonMessage.newMessage("infotrygdendring", mapOf(
             "fødselsnummer" to fnr,
             "aktørId" to aktørId,
             "endringsmeldingId" to endringsmeldingId
         ))
         val utgående = message.toJson()
+        if (!repo.markerEndringsmeldingerSomLest(endringsmeldingId)) return sikkerlogg.info("Allerede løst dette behovet")
         if (!repo.lagreUtgåendeMelding(endringsmeldingId, utgående)) return sikkerlogg.error("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående",
             StructuredArguments.keyValue("endringsmeldingId", endringsmeldingId),
             StructuredArguments.keyValue("fnr", fnr)

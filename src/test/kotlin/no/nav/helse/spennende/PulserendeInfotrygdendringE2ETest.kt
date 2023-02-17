@@ -10,7 +10,6 @@ import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import java.time.Duration
-import java.util.*
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -20,6 +19,7 @@ internal class PulserendeInfotrygdendringE2ETest {
 
     private companion object {
         private const val fødselsnummer = "12345678911"
+        private const val aktør = "aktør"
     }
 
     private lateinit var repository: PostgresRepository
@@ -89,16 +89,19 @@ internal class PulserendeInfotrygdendringE2ETest {
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendtBehov(fnr = "1")
+        assertSendInfotrygdendringVedLøsning()
 
         mainpulerLestTidspunkt(hendelseId2)
         puls()
-        assertEquals(2, rapid.inspektør.size)
+        assertEquals(3, rapid.inspektør.size)
         assertSendtBehov(fnr = "2")
+        assertSendInfotrygdendringVedLøsning()
 
         mainpulerLestTidspunkt(hendelseId3)
         puls()
-        assertEquals(3, rapid.inspektør.size)
+        assertEquals(5, rapid.inspektør.size)
         assertSendtBehov(fnr = "3")
+        assertSendInfotrygdendringVedLøsning()
     }
 
     @Test
@@ -114,23 +117,65 @@ internal class PulserendeInfotrygdendringE2ETest {
         assertSendInfotrygdendringVedLøsning()
     }
 
+    @Test
+    fun `mottar ikke løsning på behovet før neste puls - retry`() {
+        val hendelseId = 1234567L
+        rapid.sendTestMessage(createTestMessage(hendelseId))
+        puls()
+        assertEquals(0, rapid.inspektør.size)
+        mainpulerLestTidspunkt(hendelseId)
+        puls()
+        assertEquals(1, rapid.inspektør.size)
+        assertSendtBehov()
+        puls()
+        assertEquals(2, rapid.inspektør.size)
+    }
+
+    @Test
+    fun `mottar ikke løsning på behovet før neste puls - mottar to løsninger for samme endringsmelding`() {
+        val hendelseId = 1234567L
+        rapid.sendTestMessage(createTestMessage(hendelseId))
+        puls()
+        assertEquals(0, rapid.inspektør.size)
+        mainpulerLestTidspunkt(hendelseId)
+        puls()
+        assertEquals(1, rapid.inspektør.size)
+        assertSendtBehov()
+        puls()
+        assertEquals(2, rapid.inspektør.size)
+        assertSendInfotrygdendringVedLøsning()
+        val sizeFør = rapid.inspektør.size
+        sendLøsningPåBehov()
+        val sizeEtter = rapid.inspektør.size
+        assertEquals(sizeFør, sizeEtter)
+    }
+
     private fun puls() {
         rapid.sendTestMessage("""{"@event_name": "ping"}""")
     }
 
-    private fun assertSendInfotrygdendringVedLøsning() {
-        val fnr = UUID.randomUUID().toString()
-        val aktørId = UUID.randomUUID().toString()
-        rapid.sendTestMessage(rapid.sisteMelding().medLøsning(fnr, aktørId).toString())
-        val utgående = rapid.sisteMelding()
+    private fun assertSendInfotrygdendringVedLøsning(fnr: String = fødselsnummer, aktørId: String = aktør) {
+        sendLøsningPåBehov(fnr, aktørId)
+        assertSendtInfotrygdendring(rapid.sisteMelding(), fnr, aktørId)
+    }
 
+    private fun assertSendtInfotrygdendring(utgående: JsonNode, fnr: String, aktørId: String) {
         Assertions.assertTrue(utgående.contains("@id"))
         assertEquals("infotrygdendring", utgående.path("@event_name").asText())
         assertEquals(fnr, utgående.path("fødselsnummer").asText())
         assertEquals(aktørId, utgående.path("aktørId").asText())
     }
 
+    private fun sendLøsningPåBehov(fnr: String = fødselsnummer, aktørId: String = aktør) {
+        rapid.sendTestMessage(rapid.sisteBehov().medLøsning(fnr, aktørId).toString())
+    }
+
     fun TestRapid.sisteMelding() = inspektør.message(inspektør.size -1)
+    fun TestRapid.sisteBehov(): JsonNode {
+        val index = (0 until inspektør.size).last { inspektør.message(it).path("@event_name").asText() == "behov" }
+        return rapid.inspektør.message(index)
+    }
+
 
     private fun JsonNode.medLøsning(fnr: String, aktørId: String) = (this as ObjectNode).apply {
         putObject("@løsning").apply {

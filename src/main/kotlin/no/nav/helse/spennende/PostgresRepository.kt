@@ -27,7 +27,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 SELECT DISTINCT ON (e.person_id) e.person_id, p.fnr as fnr, e.id as endringsmelding_id, e.lest as lest
                 FROM endringsmelding e 
                 JOIN person p ON e.person_id = p.id
-                WHERE e.sendt IS NULL
+                WHERE e.sendt IS NULL AND e.utgående_melding IS NULL
                 ORDER BY e.person_id, e.lest DESC
             )
             SELECT fnr, endringsmelding_id, lest 
@@ -57,28 +57,25 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         return session.run(queryOf(FINN_SENDEKLARE_ENDRINGSMELDINGER).map { row ->
             SendeklarEndringsmelding(
                 row.string("fnr"),
-                row.localDateTime("lest"),
                 row.long("endringsmelding_id")
             )
         }.asList)
     }
 
-    internal fun markerEndringsmeldingerSomLest(session: TransactionalSession, endringsmeldingId: Long, lest: LocalDateTime) {
-        check(
-            session.run(
+    internal fun markerEndringsmeldingerSomLest(endringsmeldingId: Long): Boolean {
+        return sessionOf(dataSource).use {
+            it.run(
                 queryOf(
                     MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
-                        "endringsmeldingId" to endringsmeldingId,
-                        "lest" to lest
+                        "endringsmeldingId" to endringsmeldingId
                     )
                 ).asUpdate
             ) > 0
-        )
+        }
     }
 
     internal class SendeklarEndringsmelding(
         val fnr: String,
-        val lest: LocalDateTime,
         val endringsmeldingId: Long
     )
 
@@ -86,7 +83,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         requireNotNull(lagreEndringsmeldingOgReturnerId(fnr, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
 
     internal fun lagreUtgåendeMelding(endringsmeldingId: Long, json: String): Boolean {
-        return 1 == sessionOf(dataSource, returnGeneratedKey = true).use { session ->
+        return 1 == sessionOf(dataSource).use { session ->
             session.run(queryOf(UPDATE_UTGÅENDE, mapOf(
                 "endringsmeldingId" to endringsmeldingId,
                 "melding" to json

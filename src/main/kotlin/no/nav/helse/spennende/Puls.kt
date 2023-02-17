@@ -28,7 +28,7 @@ internal class Puls(
         repo.transactionally {
             repo.hentSendeklareEndringsmeldinger(this).forEach { melding ->
                 publiserBehov(melding.endringsmeldingId, melding.fnr, context)
-                repo.markerEndringsmeldingerSomLest(this, melding.endringsmeldingId, melding.lest)
+                //repo.markerEndringsmeldingerSomLest(this, melding.endringsmeldingId, melding.lest)
             }
         }
     }
