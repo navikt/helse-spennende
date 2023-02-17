@@ -27,7 +27,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 SELECT DISTINCT ON (e.person_id) e.person_id, p.fnr as fnr, e.id as endringsmelding_id, e.lest as lest
                 FROM endringsmelding e 
                 JOIN person p ON e.person_id = p.id
-                WHERE sendt IS NULL
+                WHERE e.sendt IS NULL
                 ORDER BY e.person_id, e.lest DESC
             )
             SELECT fnr, endringsmelding_id, lest 
@@ -41,7 +41,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         private const val MARKER_ENDRINGSMELDINGER_SOM_SENDT = """
             UPDATE endringsmelding SET sendt = now() 
             WHERE person_id = (SELECT person_id from endringsmelding WHERE id = :endringsmeldingId)  
-            AND sendt is NULL AND lest <= :lest
+            AND sendt is NULL AND id <= :endringsmeldingId
         """
     }
 
@@ -64,10 +64,16 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     }
 
     internal fun markerEndringsmeldingerSomLest(session: TransactionalSession, endringsmeldingId: Long, lest: LocalDateTime) {
-        session.run(queryOf(MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
-            "endringsmeldingId" to endringsmeldingId,
-            "lest" to lest
-        )).asUpdate)
+        check(
+            session.run(
+                queryOf(
+                    MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
+                        "endringsmeldingId" to endringsmeldingId,
+                        "lest" to lest
+                    )
+                ).asUpdate
+            ) > 0
+        )
     }
 
     internal class SendeklarEndringsmelding(
