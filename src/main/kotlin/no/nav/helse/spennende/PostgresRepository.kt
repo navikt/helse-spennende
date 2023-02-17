@@ -1,6 +1,7 @@
 package no.nav.helse.spennende
 
 import kotliquery.Session
+import kotliquery.TransactionalSession
 import kotliquery.queryOf
 import kotliquery.sessionOf
 import org.intellij.lang.annotations.Language
@@ -20,8 +21,60 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         private const val UPDATE_UTGÅENDE = """UPDATE endringsmelding SET utgående_melding=:melding WHERE id=:endringsmeldingId"""
         @Language("PostgreSQL")
         private const val UPDATE_ACTIVITY = """UPDATE endringsmelding SET sendt=now() WHERE id=:endringsmeldingId"""
+        @Language("PostgreSQL")
+        private const val FINN_SENDEKLARE_ENDRINGSMELDINGER = """
+            WITH sisteEndringsmeldingPerPerson AS (
+                SELECT DISTINCT ON (e.person_id) e.person_id, p.fnr as fnr, e.id as endringsmelding_id, e.lest as lest
+                FROM endringsmelding e 
+                JOIN person p ON e.person_id = p.id
+                WHERE sendt IS NULL
+                ORDER BY e.person_id, e.lest DESC
+            )
+            SELECT fnr, endringsmelding_id, lest 
+            FROM sisteEndringsmeldingPerPerson
+            WHERE lest < now() - INTERVAL '5 minutes'
+            FOR UPDATE
+            SKIP LOCKED
+            """
+
+        @Language("PostgreSQL")
+        private const val MARKER_ENDRINGSMELDINGER_SOM_SENDT = """
+            UPDATE endringsmelding SET sendt = now() 
+            WHERE person_id = (SELECT person_id from endringsmelding WHERE id = :endringsmeldingId)  
+            AND sendt is NULL AND lest <= :lest
+        """
     }
+
     private val dataSource by lazy(dataSourceGetter)
+
+    fun transactionally(f: TransactionalSession.() -> Unit) {
+        sessionOf(dataSource).use { session ->
+            session.transaction { f(it) }
+        }
+    }
+
+    internal fun hentSendeklareEndringsmeldinger(session: TransactionalSession): List<SendeklarEndringsmelding> {
+        return session.run(queryOf(FINN_SENDEKLARE_ENDRINGSMELDINGER).map { row ->
+            SendeklarEndringsmelding(
+                row.string("fnr"),
+                row.localDateTime("lest"),
+                row.long("endringsmelding_id")
+            )
+        }.asList)
+    }
+
+    internal fun markerEndringsmeldingerSomLest(session: TransactionalSession, endringsmeldingId: Long, lest: LocalDateTime) {
+        session.run(queryOf(MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
+            "endringsmeldingId" to endringsmeldingId,
+            "lest" to lest
+        )).asUpdate)
+    }
+
+    internal class SendeklarEndringsmelding(
+        val fnr: String,
+        val lest: LocalDateTime,
+        val endringsmeldingId: Long
+    )
 
     internal fun lagreEndringsmelding(fnr: String, hendelseId: Long, json: String): Long =
         requireNotNull(lagreEndringsmeldingOgReturnerId(fnr, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
@@ -64,7 +117,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             )
         }
 
-    private fun lagreSisteAktivitet(endringsmeldingId: Long) {
+    internal fun lagreSisteAktivitet(endringsmeldingId: Long) {
         sessionOf(dataSource).use { session ->
             session.run(queryOf(UPDATE_ACTIVITY, mapOf("endringsmeldingId" to endringsmeldingId)).asUpdate)
         }
