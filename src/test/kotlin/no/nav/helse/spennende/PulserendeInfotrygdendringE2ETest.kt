@@ -9,7 +9,6 @@ import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import java.time.Duration
 
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -49,7 +48,7 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
         assertEquals(0, rapid.inspektør.size)
-        mainpulerLestTidspunkt(hendelseId)
+        setEndringsmeldingTilForfall(hendelseId)
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendtBehov()
@@ -65,11 +64,11 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId3))
         puls()
         assertEquals(0, rapid.inspektør.size)
-        mainpulerLestTidspunkt(hendelseId1)
-        mainpulerLestTidspunkt(hendelseId2)
+        setEndringsmeldingTilForfall(hendelseId1)
+        setEndringsmeldingTilForfall(hendelseId2)
         puls()
         assertEquals(0, rapid.inspektør.size)
-        mainpulerLestTidspunkt(hendelseId3)
+        setEndringsmeldingTilForfall(hendelseId3)
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendtBehov()
@@ -85,19 +84,19 @@ internal class PulserendeInfotrygdendringE2ETest {
         puls()
         assertEquals(0, rapid.inspektør.size)
 
-        mainpulerLestTidspunkt(hendelseId1)
+        setEndringsmeldingTilForfall(hendelseId1)
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendtBehov(fnr = "1")
         assertSendInfotrygdendringVedLøsning()
 
-        mainpulerLestTidspunkt(hendelseId2)
+        setEndringsmeldingTilForfall(hendelseId2)
         puls()
         assertEquals(3, rapid.inspektør.size)
         assertSendtBehov(fnr = "2")
         assertSendInfotrygdendringVedLøsning()
 
-        mainpulerLestTidspunkt(hendelseId3)
+        setEndringsmeldingTilForfall(hendelseId3)
         puls()
         assertEquals(5, rapid.inspektør.size)
         assertSendtBehov(fnr = "3")
@@ -110,7 +109,7 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
         assertEquals(0, rapid.inspektør.size)
-        mainpulerLestTidspunkt(hendelseId)
+        setEndringsmeldingTilForfall(hendelseId)
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendtBehov()
@@ -123,10 +122,11 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
         assertEquals(0, rapid.inspektør.size)
-        mainpulerLestTidspunkt(hendelseId)
+        setEndringsmeldingTilForfall(hendelseId)
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendtBehov()
+        setEndringsmeldingTilForfall(hendelseId)
         puls()
         assertEquals(2, rapid.inspektør.size)
     }
@@ -137,10 +137,11 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
         assertEquals(0, rapid.inspektør.size)
-        mainpulerLestTidspunkt(hendelseId)
+        setEndringsmeldingTilForfall(hendelseId)
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendtBehov()
+        setEndringsmeldingTilForfall(hendelseId)
         puls()
         assertEquals(2, rapid.inspektør.size)
         assertSendInfotrygdendringVedLøsning()
@@ -193,15 +194,15 @@ internal class PulserendeInfotrygdendringE2ETest {
         assertEquals(fnr, rapid.sisteMelding().path("ident").asText())
     }
 
-    private fun mainpulerLestTidspunkt(hendelseId: Long, trekkFra: Duration = Duration.ofSeconds(301)) {
+    private fun setEndringsmeldingTilForfall(hendelseId: Long) {
         sessionOf(PgDb.connection()).use { session ->
             @Language("PostgreSQL")
             val sql = """
                 UPDATE endringsmelding 
-                SET lest = (SELECT lest FROM endringsmelding WHERE hendelse_id = ?) - INTERVAL '${trekkFra.seconds} SECONDS' 
+                SET neste_forfallstidspunkt = NOW() - INTERVAL '24 HOURS' 
                 WHERE hendelse_id = ?
             """
-            require(session.run(queryOf(sql, hendelseId, hendelseId).asUpdate) == 1)
+            require(session.run(queryOf(sql, hendelseId).asUpdate) == 1)
         }
     }
 

@@ -5,16 +5,22 @@ import kotliquery.TransactionalSession
 import kotliquery.queryOf
 import kotliquery.sessionOf
 import org.intellij.lang.annotations.Language
+import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.LocalDateTime.now
 import javax.sql.DataSource
 
 internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     private companion object {
+        private val logger = LoggerFactory.getLogger("tjenestekall")
+
+        private val nesteForfall = Duration.ofMinutes(5)
+
         @Language("PostgreSQL")
         private const val INSERT_PERSON = """INSERT INTO person (fnr) VALUES (:fnr) ON CONFLICT DO NOTHING"""
         @Language("PostgreSQL")
-        private const val INSERT_ENDRINGSMELDING = """INSERT INTO endringsmelding (person_id, hendelse_id, innkommende_melding) VALUES ((SELECT id FROM person WHERE fnr = :fnr), :hendelseId, :melding)"""
+        private const val INSERT_ENDRINGSMELDING = """INSERT INTO endringsmelding (person_id, hendelse_id, innkommende_melding, neste_forfallstidspunkt) VALUES ((SELECT id FROM person WHERE fnr = :fnr), :hendelseId, :melding, :neste_forfallstidspunkt)"""
         @Language("PostgreSQL")
         private const val SELECT_ACTIVITY = """SELECT sendt FROM endringsmelding WHERE sendt IS NOT NULL AND person_id=(SELECT person_id FROM endringsmelding WHERE id=:endringsmeldingId) ORDER BY sendt DESC LIMIT 1"""
         @Language("PostgreSQL")
@@ -22,17 +28,19 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         @Language("PostgreSQL")
         private const val UPDATE_ACTIVITY = """UPDATE endringsmelding SET sendt=now() WHERE id=:endringsmeldingId"""
         @Language("PostgreSQL")
+        private const val SET_NESTE_FORFALLSDATO_FOR_PERSON = """UPDATE ENDRINGSMELDING SET neste_forfallstidspunkt=:neste_forfallstidspunkt WHERE person_id=(SELECT id FROM person WHERE fnr=:fnr)"""
+        @Language("PostgreSQL")
         private const val FINN_SENDEKLARE_ENDRINGSMELDINGER = """
             WITH sisteEndringsmeldingPerPerson AS (
-                SELECT DISTINCT ON (e.person_id) e.person_id, p.fnr as fnr, e.id as endringsmelding_id, e.lest as lest
+                SELECT DISTINCT ON (e.person_id) e.person_id, p.fnr as fnr, e.id as endringsmelding_id, e.neste_forfallstidspunkt as neste_forfallstidspunkt
                 FROM endringsmelding e 
                 JOIN person p ON e.person_id = p.id
                 WHERE e.sendt IS NULL AND e.utgående_melding IS NULL
-                ORDER BY e.person_id, e.lest DESC
+                ORDER BY e.person_id, e.neste_forfallstidspunkt DESC
             )
-            SELECT fnr, endringsmelding_id, lest 
+            SELECT fnr, endringsmelding_id, neste_forfallstidspunkt 
             FROM sisteEndringsmeldingPerPerson
-            WHERE lest < now() - INTERVAL '5 minutes'
+            WHERE neste_forfallstidspunkt <= now()
             FOR UPDATE
             SKIP LOCKED
             """
@@ -62,7 +70,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         }.asList)
     }
 
-    internal fun markerEndringsmeldingerSomLest(endringsmeldingId: Long): Boolean {
+    internal fun markerEndringsmeldingerSomSendt(endringsmeldingId: Long): Boolean {
         return sessionOf(dataSource).use {
             it.run(
                 queryOf(
@@ -72,6 +80,17 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 ).asUpdate
             ) > 0
         }
+    }
+
+    internal fun setNesteForfallstidspunkt(session: TransactionalSession, fnr: String): Boolean {
+        return session.run(
+            queryOf(
+                SET_NESTE_FORFALLSDATO_FOR_PERSON, mapOf(
+                    "fnr" to fnr,
+                    "neste_forfallstidspunkt" to now() + nesteForfall
+                )
+            ).asUpdate
+        ) > 0
     }
 
     internal class SendeklarEndringsmelding(
@@ -97,7 +116,8 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             session.run(queryOf(INSERT_ENDRINGSMELDING, mapOf(
                 "fnr" to fnr,
                 "hendelseId" to hendelseId,
-                "melding" to json
+                "melding" to json,
+                "neste_forfallstidspunkt" to now() + nesteForfall
             )).asUpdateAndReturnGeneratedKey)
         }
 
