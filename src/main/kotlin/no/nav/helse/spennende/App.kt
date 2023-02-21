@@ -39,7 +39,9 @@ internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: 
     val repo = PostgresRepository(dataSourceInitializer::dataSource)
     return rapidsConnection.apply {
         register(dataSourceInitializer)
-        Infotrygdendringer(this, repo)
+        InfotrygdhendelseRiver(this, repo)
+        Puls(this, repo)
+        InfotrygdhendelseBerikerRiver(this, repo)
     }.also { it.start() }
 }
 

@@ -151,6 +151,19 @@ internal class PulserendeInfotrygdendringE2ETest {
         assertEquals(sizeFør, sizeEtter)
     }
 
+    @Test
+    fun `reagerer ikke på behov med løsning uten @final`() {
+        val hendelseId = 1234567L
+        rapid.sendTestMessage(createTestMessage(hendelseId))
+        setEndringsmeldingTilForfall(hendelseId)
+        puls()
+        assertEquals(1, rapid.inspektør.size)
+        rapid.sendTestMessage(rapid.inspektør.message(0).medLøsning(fødselsnummer, "aktørid").apply {
+            remove("@final")
+        }.toString())
+        assertEquals(1, rapid.inspektør.size)
+    }
+
     private fun puls() {
         rapid.sendTestMessage("""{"@event_name": "ping"}""")
     }

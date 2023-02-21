@@ -27,13 +27,14 @@ internal class Puls(
     }
 
     private fun pulser(context: MessageContext) {
+        logger.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
         repo.transactionally {
             repo.hentSendeklareEndringsmeldinger(this).forEach { melding ->
                 publiserBehov(melding.endringsmeldingId, melding.fnr, context).also {
-                    logger.info("Publiserer behov for ${melding.endringsmeldingId} med ${melding.fnr}")
+                    logger.info("Publiserer behov for endringsmeldingId ${melding.endringsmeldingId} med fnr ${melding.fnr}")
                 }
                 repo.setNesteForfallstidspunkt(this, melding.fnr).also {
-                    logger.info("Setter neste forfallstidspunkt for ${melding.fnr}")
+                    logger.info("Setter neste forfallstidspunkt for fnr ${melding.fnr}")
                 }
             }
         }

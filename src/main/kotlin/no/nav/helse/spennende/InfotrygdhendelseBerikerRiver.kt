@@ -1,5 +1,6 @@
 package no.nav.helse.spennende
 
+import io.prometheus.client.Counter
 import net.logstash.logback.argument.StructuredArguments
 import no.nav.helse.rapids_rivers.*
 import org.slf4j.LoggerFactory
@@ -8,6 +9,11 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
 
     private companion object {
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
+        private val publiserteEndringer = Counter
+            .build()
+            .name("publiserte_infotrygdendringer")
+            .help("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
+            .register()
     }
 
     init {
@@ -37,6 +43,8 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
             StructuredArguments.keyValue("endringsmeldingId", endringsmeldingId),
             StructuredArguments.keyValue("fnr", fnr)
         )
+        publiserteEndringer.inc()
+        sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
         context.publish(fnr, utgående)
     }
 

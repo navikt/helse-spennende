@@ -1,5 +1,6 @@
 package no.nav.helse.spennende
 
+import io.prometheus.client.Counter
 import net.logstash.logback.argument.StructuredArguments
 import no.nav.helse.rapids_rivers.*
 import org.slf4j.LoggerFactory
@@ -8,6 +9,12 @@ internal class InfotrygdhendelseRiver(rapidsConnection: RapidsConnection, val re
 
     private companion object {
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
+        private val endringer = Counter
+            .build()
+            .name("infotrygdendringer")
+            .labelNames("tabellnavn")
+            .help("Teller alle innkommende infotrygdendringer, og angir tabellnavn")
+            .register()
     }
     init {
         River(rapidsConnection).apply {
@@ -25,6 +32,7 @@ internal class InfotrygdhendelseRiver(rapidsConnection: RapidsConnection, val re
         val fnr = packet["after.F_NR"].asText().trim()
         try {
             repo.lagreEndringsmelding(fnr, hendelseId, packet.toJson())
+            endringer.labels(packet["after.TABELLNAVN"].asText()).inc()
         } catch (err: Exception) {
             sikkerlogg.error("Feil ved lagring av endringsmelding for {} {}: {}",
                 StructuredArguments.keyValue("hendelse_id", hendelseId),
