@@ -20,9 +20,10 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
         River(rapidsConnection).apply {
             validate {
                 it.demandValue("@event_name", "behov")
+                it.demandKey("endringsmeldingId")
                 it.demandValue("@final", true)
                 it.requireKey("@løsning.HentIdenter.fødselsnummer", "@løsning.HentIdenter.aktørId")
-                it.requireKey("@id", "@opprettet", "endringsmeldingId")
+                it.requireKey("@id", "@opprettet")
             }
         }.register(this)
     }
@@ -49,7 +50,7 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
     }
 
     override fun onError(problems: MessageProblems, context: MessageContext) {
-        sikkerlogg.info("forstod ikke infotrygdendring:\n${problems.toExtendedReport()}")
+        sikkerlogg.info("Forstod ikke infotrygdendring med løsning på behov:\n${problems.toExtendedReport()}")
     }
 
 }
