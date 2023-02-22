@@ -31,18 +31,19 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         private const val SET_NESTE_FORFALLSDATO_FOR_PERSON = """UPDATE ENDRINGSMELDING SET neste_forfallstidspunkt=:neste_forfallstidspunkt WHERE person_id=(SELECT id FROM person WHERE fnr=:fnr)"""
         @Language("PostgreSQL")
         private const val FINN_SENDEKLARE_ENDRINGSMELDINGER = """
-            WITH sisteEndringsmeldingPerPerson AS (
-                SELECT DISTINCT ON (e.person_id) e.person_id, p.fnr as fnr, e.id as endringsmelding_id, e.neste_forfallstidspunkt as neste_forfallstidspunkt
-                FROM endringsmelding e 
-                JOIN person p ON e.person_id = p.id
+            WITH alleIkkeSendteEndringsmeldinger AS (
+                SELECT e.person_id, p.fnr as fnr, e.id as endringsmelding_id, e.neste_forfallstidspunkt as neste_forfallstidspunkt
+                FROM endringsmelding e
+                         JOIN person p ON e.person_id = p.id
                 WHERE e.sendt IS NULL AND e.utgående_melding IS NULL
                 ORDER BY e.person_id, e.neste_forfallstidspunkt DESC
+                FOR UPDATE
+                SKIP LOCKED
             )
-            SELECT fnr, endringsmelding_id, neste_forfallstidspunkt 
-            FROM sisteEndringsmeldingPerPerson
-            WHERE neste_forfallstidspunkt <= now()
-            FOR UPDATE
-            SKIP LOCKED
+            SELECT fnr, MAX(endringsmelding_id) as siste_endringsmelding_id
+            FROM alleIkkeSendteEndringsmeldinger
+            GROUP BY fnr
+            HAVING MAX(neste_forfallstidspunkt) <= now();
             """
 
         @Language("PostgreSQL")
@@ -65,7 +66,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         return session.run(queryOf(FINN_SENDEKLARE_ENDRINGSMELDINGER).map { row ->
             SendeklarEndringsmelding(
                 row.string("fnr"),
-                row.long("endringsmelding_id")
+                row.long("siste_endringsmelding_id")
             )
         }.asList)
     }
