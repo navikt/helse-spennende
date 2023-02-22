@@ -31,7 +31,8 @@ internal class InfotrygdhendelseRiver(rapidsConnection: RapidsConnection, val re
         val hendelseId = packet["after.HENDELSE_ID"].asText().trim().toLong()
         val fnr = packet["after.F_NR"].asText().trim()
         try {
-            repo.lagreEndringsmelding(fnr, hendelseId, packet.toJson())
+            val endringsmeldingId = repo.lagreEndringsmelding(fnr, hendelseId, packet.toJson())
+            sikkerlogg.info("leste infotrygdendring som ble lagret med endringsmeldingId $endringsmeldingId for fnr $fnr")
             endringer.labels(packet["after.TABELLNAVN"].asText()).inc()
         } catch (err: Exception) {
             sikkerlogg.error("Feil ved lagring av endringsmelding for {} {}: {}",

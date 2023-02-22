@@ -39,7 +39,7 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
             "endringsmeldingId" to endringsmeldingId
         ))
         val utgående = message.toJson()
-        if (!repo.markerEndringsmeldingerSomSendt(endringsmeldingId)) return sikkerlogg.info("Allerede løst dette behovet")
+        if (!repo.markerEndringsmeldingerSomSendt(endringsmeldingId)) return sikkerlogg.info("Allerede løst dette behovet for endringsmeldingId $endringsmeldingId med fnr $fnr")
         if (!repo.lagreUtgåendeMelding(endringsmeldingId, utgående)) return sikkerlogg.error("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående",
             StructuredArguments.keyValue("endringsmeldingId", endringsmeldingId),
             StructuredArguments.keyValue("fnr", fnr)
