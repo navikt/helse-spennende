@@ -23,11 +23,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         @Language("PostgreSQL")
         private const val INSERT_ENDRINGSMELDING = """INSERT INTO endringsmelding (person_id, hendelse_id, innkommende_melding, neste_forfallstidspunkt) VALUES ((SELECT id FROM person WHERE fnr = :fnr), :hendelseId, :melding, :neste_forfallstidspunkt)"""
         @Language("PostgreSQL")
-        private const val SELECT_ACTIVITY = """SELECT sendt FROM endringsmelding WHERE sendt IS NOT NULL AND person_id=(SELECT person_id FROM endringsmelding WHERE id=:endringsmeldingId) ORDER BY sendt DESC LIMIT 1"""
-        @Language("PostgreSQL")
         private const val UPDATE_UTGÅENDE = """UPDATE endringsmelding SET utgående_melding=:melding WHERE id=:endringsmeldingId"""
-        @Language("PostgreSQL")
-        private const val UPDATE_ACTIVITY = """UPDATE endringsmelding SET sendt=now() WHERE id=:endringsmeldingId"""
         @Language("PostgreSQL")
         // ... 'and sendt is null' er for å hjelpe query planneren til å innse at den kan bruke indeksen opprettet i V0_6 mye, mye mer effektivt
         private const val SET_NESTE_FORFALLSDATO_FOR_PERSON = """UPDATE endringsmelding SET neste_forfallstidspunkt=:neste_forfallstidspunkt WHERE person_id=:person_id and sendt is null;"""
@@ -132,26 +128,5 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
     private fun sikrePersonFinnes(session: Session, fnr: String) {
         session.run(queryOf(INSERT_PERSON, mapOf("fnr" to fnr)).asExecute)
-    }
-
-    internal fun skalRepublisere(endringsmeldingId: Long, ratebegrensning: Duration): Boolean {
-        val sisteAktivitet = hentSisteAktivitet(endringsmeldingId)
-        val nå = LocalDateTime.now()
-        val skalRepublisere = (sisteAktivitet == null || Duration.between(sisteAktivitet, nå) >= ratebegrensning)
-        if (skalRepublisere) lagreSisteAktivitet(endringsmeldingId)
-        return skalRepublisere
-    }
-
-    private fun hentSisteAktivitet(endringsmeldingId: Long) =
-        sessionOf(dataSource).use { session ->
-            session.run(queryOf(SELECT_ACTIVITY, mapOf("endringsmeldingId" to endringsmeldingId))
-                .map { row -> row.localDateTimeOrNull("sendt") }.asSingle
-            )
-        }
-
-    internal fun lagreSisteAktivitet(endringsmeldingId: Long) {
-        sessionOf(dataSource).use { session ->
-            session.run(queryOf(UPDATE_ACTIVITY, mapOf("endringsmeldingId" to endringsmeldingId)).asUpdate)
-        }
     }
 }
