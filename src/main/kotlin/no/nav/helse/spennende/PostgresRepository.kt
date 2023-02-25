@@ -13,6 +13,7 @@ import javax.sql.DataSource
 
 internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     private companion object {
+        private val publiclog = LoggerFactory.getLogger(PostgresRepository::class.java)
         private val logger = LoggerFactory.getLogger("tjenestekall")
 
         private val nesteForfall = Duration.ofMinutes(5)
@@ -28,7 +29,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         @Language("PostgreSQL")
         private const val UPDATE_ACTIVITY = """UPDATE endringsmelding SET sendt=now() WHERE id=:endringsmeldingId"""
         @Language("PostgreSQL")
-        private const val SET_NESTE_FORFALLSDATO_FOR_PERSON = """UPDATE ENDRINGSMELDING SET neste_forfallstidspunkt=:neste_forfallstidspunkt WHERE person_id=(SELECT id FROM person WHERE fnr=:fnr)"""
+        private const val SET_NESTE_FORFALLSDATO_FOR_PERSON = """UPDATE endringsmelding SET neste_forfallstidspunkt=:neste_forfallstidspunkt WHERE person_id=:person_id"""
         @Language("PostgreSQL")
         private const val FINN_SENDEKLARE_ENDRINGSMELDINGER = """
             WITH alleIkkeSendteEndringsmeldinger AS (
@@ -37,7 +38,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 FOR UPDATE
                 SKIP LOCKED
             )
-            SELECT p.fnr, MAX(e.id) as siste_endringsmelding_id
+            SELECT p.id as person_id, p.fnr, MAX(e.id) as siste_endringsmelding_id
             FROM alleIkkeSendteEndringsmeldinger e
             INNER JOIN person p ON e.person_id = p.id
             GROUP BY p.id
@@ -54,19 +55,24 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
     private val dataSource by lazy(dataSourceGetter)
 
-    fun transactionally(f: TransactionalSession.() -> Unit) {
+    private fun transactionally(f: TransactionalSession.() -> Unit) {
         sessionOf(dataSource).use { session ->
             session.transaction { f(it) }
         }
     }
 
-    internal fun hentSendeklareEndringsmeldinger(session: TransactionalSession): List<SendeklarEndringsmelding> {
-        return session.run(queryOf(FINN_SENDEKLARE_ENDRINGSMELDINGER).map { row ->
-            SendeklarEndringsmelding(
-                row.string("fnr"),
-                row.long("siste_endringsmelding_id")
-            )
-        }.asList)
+    internal fun hentSendeklareEndringsmeldinger(block: (SendeklarEndringsmelding) -> Unit) {
+        transactionally {
+            run(queryOf(FINN_SENDEKLARE_ENDRINGSMELDINGER).map { row ->
+                SendeklarEndringsmelding(
+                    row.long("person_id"),
+                    row.string("fnr"),
+                    row.long("siste_endringsmelding_id")
+                )
+            }.asList)
+                .onEach { melding -> melding.oppdaterForfallstidspunkt(this) }
+                .onEach(block)
+        }
     }
 
     internal fun markerEndringsmeldingerSomSendt(endringsmeldingId: Long): Boolean {
@@ -81,21 +87,24 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         }
     }
 
-    internal fun setNesteForfallstidspunkt(session: TransactionalSession, fnr: String): Boolean {
-        return session.run(
-            queryOf(
-                SET_NESTE_FORFALLSDATO_FOR_PERSON, mapOf(
-                    "fnr" to fnr,
-                    "neste_forfallstidspunkt" to now() + nesteForfall
-                )
-            ).asUpdate
-        ) > 0
-    }
-
     internal class SendeklarEndringsmelding(
+        private val personId: Long,
         val fnr: String,
         val endringsmeldingId: Long
-    )
+    ) {
+        internal fun oppdaterForfallstidspunkt(session: TransactionalSession) {
+            setNesteForfallstidspunkt(session, personId)
+            publiclog.info("Setter neste forfallstidspunkt for endringsmeldingId $endringsmeldingId")
+            logger.info("Setter neste forfallstidspunkt for fnr $fnr (endringsmeldingId $endringsmeldingId)")
+        }
+
+        private fun setNesteForfallstidspunkt(session: TransactionalSession, personId: Long) {
+            session.run(queryOf(SET_NESTE_FORFALLSDATO_FOR_PERSON, mapOf(
+                "person_id" to personId,
+                "neste_forfallstidspunkt" to now() + nesteForfall
+            )).asUpdate)
+        }
+    }
 
     internal fun lagreEndringsmelding(fnr: String, hendelseId: Long, json: String): Long =
         requireNotNull(lagreEndringsmeldingOgReturnerId(fnr, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
