@@ -7,7 +7,6 @@ import kotliquery.sessionOf
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 import java.time.Duration
-import java.time.LocalDateTime
 import java.time.LocalDateTime.now
 import javax.sql.DataSource
 
@@ -66,7 +65,13 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                     row.long("siste_endringsmelding_id")
                 )
             }.asList)
-                .onEach { melding -> melding.oppdaterForfallstidspunkt(this) }
+                .also{
+                    logger.info("Personer: {}", it.joinToString {
+                        "${it.fnr} - ${it.endringsmeldingId}" })
+                }
+                .onEach { melding ->
+                    melding.oppdaterForfallstidspunkt(this)
+                }
                 .onEach(block)
         }
     }
@@ -82,9 +87,9 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         val endringsmeldingId: Long
     ) {
         internal fun oppdaterForfallstidspunkt(session: TransactionalSession) {
+            logger.info("Setter neste forfallstidspunkt for personId $personId fnr $fnr (endringsmeldingId $endringsmeldingId)")
+            publiclog.info("Setter neste forfallstidspunkt for personId $personId endringsmeldingId $endringsmeldingId")
             setNesteForfallstidspunkt(session, personId)
-            publiclog.info("Setter neste forfallstidspunkt for endringsmeldingId $endringsmeldingId")
-            logger.info("Setter neste forfallstidspunkt for fnr $fnr (endringsmeldingId $endringsmeldingId)")
         }
 
         private fun setNesteForfallstidspunkt(session: TransactionalSession, personId: Long) {
