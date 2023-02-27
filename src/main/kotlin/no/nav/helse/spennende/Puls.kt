@@ -10,7 +10,7 @@ import java.time.LocalDateTime
 internal class Puls(
     rapidsConnection: RapidsConnection,
     val repo: PostgresRepository,
-    val skalPulsere: (forrigePulsering: LocalDateTime) -> Boolean
+    val skalPulsere: (forrigePulsering: LocalDateTime) -> Boolean = { it < LocalDateTime.now().minusSeconds(30) }
 ) : River.PacketListener {
 
     private var forrigePulsering = LocalDateTime.MIN
