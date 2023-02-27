@@ -52,11 +52,10 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
     private val dataSource by lazy(dataSourceGetter)
 
-    private fun transactionally(f: TransactionalSession.() -> Unit) {
+    private fun <R> transactionally(f: TransactionalSession.() -> R) =
         sessionOf(dataSource).use { session ->
             session.transaction { f(it) }
         }
-    }
 
     internal fun hentSendeklareEndringsmeldinger(block: (SendeklarEndringsmelding) -> Unit) {
         transactionally {
@@ -72,17 +71,10 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         }
     }
 
-    internal fun markerEndringsmeldingerSomSendt(endringsmeldingId: Long): Boolean {
-        return sessionOf(dataSource).use {
-            it.run(
-                queryOf(
-                    MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
-                        "endringsmeldingId" to endringsmeldingId
-                    )
-                ).asUpdate
-            ) > 0
-        }
-    }
+    private fun markerEndringsmeldingerSomSendt(session: TransactionalSession, endringsmeldingId: Long) =
+        session.run(queryOf(MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
+            "endringsmeldingId" to endringsmeldingId
+        )).asUpdate) > 0
 
     internal class SendeklarEndringsmelding(
         private val personId: Long,
@@ -107,11 +99,12 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         requireNotNull(lagreEndringsmeldingOgReturnerId(fnr, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
 
     internal fun lagreUtgåendeMelding(endringsmeldingId: Long, json: String): Boolean {
-        return 1 == sessionOf(dataSource).use { session ->
-            session.run(queryOf(UPDATE_UTGÅENDE, mapOf(
+        return transactionally {
+            if (!markerEndringsmeldingerSomSendt(this, endringsmeldingId)) return@transactionally false
+            run(queryOf(UPDATE_UTGÅENDE, mapOf(
                 "endringsmeldingId" to endringsmeldingId,
                 "melding" to json
-            )).asUpdate)
+            )).asUpdate) == 1
         }
     }
 

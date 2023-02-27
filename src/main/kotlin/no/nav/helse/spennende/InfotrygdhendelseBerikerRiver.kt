@@ -2,6 +2,7 @@ package no.nav.helse.spennende
 
 import io.prometheus.client.Counter
 import net.logstash.logback.argument.StructuredArguments
+import net.logstash.logback.argument.StructuredArguments.keyValue
 import no.nav.helse.rapids_rivers.*
 import org.slf4j.LoggerFactory
 
@@ -39,10 +40,9 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
             "endringsmeldingId" to endringsmeldingId
         ))
         val utgående = message.toJson()
-        if (!repo.markerEndringsmeldingerSomSendt(endringsmeldingId)) return sikkerlogg.info("Allerede løst dette behovet for endringsmeldingId $endringsmeldingId med fnr $fnr")
         if (!repo.lagreUtgåendeMelding(endringsmeldingId, utgående)) return sikkerlogg.error("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående",
-            StructuredArguments.keyValue("endringsmeldingId", endringsmeldingId),
-            StructuredArguments.keyValue("fnr", fnr)
+            keyValue("endringsmeldingId", endringsmeldingId),
+            keyValue("fnr", fnr)
         )
         publiserteEndringer.inc()
         sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
