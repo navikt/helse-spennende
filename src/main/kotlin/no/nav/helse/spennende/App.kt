@@ -7,6 +7,7 @@ import no.nav.helse.rapids_rivers.RapidsConnection
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
 import java.time.Duration
+import java.time.LocalDateTime
 import javax.sql.DataSource
 
 private val log = LoggerFactory.getLogger("no.nav.helse.spennende.App")
@@ -40,10 +41,13 @@ internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
         InfotrygdhendelseRiver(this, repo)
-        Puls(this, repo)
+        Puls(this, repo) { it < LocalDateTime.now().minusTilfeldigeSekunder(30) }
         InfotrygdhendelseBerikerRiver(this, repo)
     }.also { it.start() }
 }
+
+internal fun LocalDateTime.minusTilfeldigeSekunder(sekunder: Int) =
+    if (sekunder < 1) this else this.minusSeconds((15..sekunder).random().toLong())
 
 private class DataSourceInitializer(private val hikariConfig: HikariConfig) : RapidsConnection.StatusListener {
     internal val dataSource: DataSource by lazy { HikariDataSource(hikariConfig) }
