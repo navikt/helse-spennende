@@ -8,6 +8,7 @@ import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.LocalDateTime.now
+import java.time.temporal.ChronoUnit
 import javax.sql.DataSource
 
 internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
@@ -15,7 +16,8 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         private val publiclog = LoggerFactory.getLogger(PostgresRepository::class.java)
         private val logger = LoggerFactory.getLogger("tjenestekall")
 
-        private val nesteForfall = Duration.ofMinutes(5)
+        private val nesteForfallUtsettelse = Duration.ofMinutes(5)
+        private val nesteForfallstidspunkt get() = now().truncatedTo(ChronoUnit.MINUTES) + nesteForfallUtsettelse
 
         @Language("PostgreSQL")
         private const val INSERT_PERSON = """INSERT INTO person (fnr) VALUES (:fnr) ON CONFLICT DO NOTHING"""
@@ -97,7 +99,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         private fun setNesteForfallstidspunkt(session: TransactionalSession, personId: Long) {
             session.run(queryOf(SET_NESTE_FORFALLSDATO_FOR_PERSON, mapOf(
                 "person_id" to personId,
-                "neste_forfallstidspunkt" to now() + nesteForfall
+                "neste_forfallstidspunkt" to nesteForfallstidspunkt
             )).asUpdate)
         }
     }
@@ -122,7 +124,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 "fnr" to fnr,
                 "hendelseId" to hendelseId,
                 "melding" to json,
-                "neste_forfallstidspunkt" to now() + nesteForfall
+                "neste_forfallstidspunkt" to nesteForfallstidspunkt
             )).asUpdateAndReturnGeneratedKey)
         }
 
