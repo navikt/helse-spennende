@@ -40,12 +40,12 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             SELECT e.person_id as person_id, e.fnr, MAX(e.id) as siste_endringsmelding_id
             FROM alleIkkeSendteEndringsmeldinger e
             GROUP BY e.person_id, e.fnr
-            HAVING MAX(neste_forfallstidspunkt) <= now();
+            HAVING MAX(neste_forfallstidspunkt) <= :naavaerendeTidspunkt;
             """
 
         @Language("PostgreSQL")
         private const val MARKER_ENDRINGSMELDINGER_SOM_SENDT = """
-            UPDATE endringsmelding SET sendt = now() 
+            UPDATE endringsmelding SET sendt = :naavaerendeTidspunkt 
             WHERE person_id = (SELECT person_id from endringsmelding WHERE id = :endringsmeldingId)  
             AND sendt is NULL AND id <= :endringsmeldingId
         """
@@ -60,13 +60,17 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
     internal fun hentSendeklareEndringsmeldinger(block: (SendeklarEndringsmelding) -> Unit) {
         transactionally {
-            run(queryOf(FINN_SENDEKLARE_ENDRINGSMELDINGER).map { row ->
-                SendeklarEndringsmelding(
-                    row.long("person_id"),
-                    row.string("fnr"),
-                    row.long("siste_endringsmelding_id")
-                )
-            }.asList)
+            run(
+                queryOf(
+                    FINN_SENDEKLARE_ENDRINGSMELDINGER,
+                    mapOf("naavaerendeTidspunkt" to now())
+                ).map { row ->
+                    SendeklarEndringsmelding(
+                        row.long("person_id"),
+                        row.string("fnr"),
+                        row.long("siste_endringsmelding_id")
+                    )
+                }.asList)
                 .also{
                     if (!it.isEmpty()){
                         logger.info("Personer: {}", it.joinToString {
@@ -82,7 +86,8 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
     private fun markerEndringsmeldingerSomSendt(session: TransactionalSession, endringsmeldingId: Long) =
         session.run(queryOf(MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
-            "endringsmeldingId" to endringsmeldingId
+            "endringsmeldingId" to endringsmeldingId,
+            "naavaerendeTidspunkt" to now()
         )).asUpdate) > 0
 
     internal class SendeklarEndringsmelding(
