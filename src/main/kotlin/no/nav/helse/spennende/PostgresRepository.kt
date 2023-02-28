@@ -31,16 +31,16 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         @Language("PostgreSQL")
         private const val FINN_SENDEKLARE_ENDRINGSMELDINGER = """
             WITH alleIkkeSendteEndringsmeldinger AS (
-                SELECT p.fnr, e.id, e.person_id, e.neste_forfallstidspunkt
-                FROM endringsmelding e INNER JOIN person p ON e.person_id = p.id
+                SELECT MAX(e.id) as siste_endringsmelding_id, e.person_id
+                FROM endringsmelding e
                 WHERE sendt IS NULL AND utgående_melding IS NULL
-                FOR UPDATE
-                SKIP LOCKED
+                GROUP BY person_id
+                HAVING MAX(neste_forfallstidspunkt) <= :naavaerendeTidspunkt
             )
-            SELECT e.person_id as person_id, e.fnr, MAX(e.id) as siste_endringsmelding_id
-            FROM alleIkkeSendteEndringsmeldinger e
-            GROUP BY e.person_id, e.fnr
-            HAVING MAX(neste_forfallstidspunkt) <= :naavaerendeTidspunkt;
+            SELECT p.id as person_id, p.fnr, e.siste_endringsmelding_id
+            FROM person p
+            INNER JOIN alleIkkeSendteEndringsmeldinger e ON e.person_id=p.id
+            FOR UPDATE SKIP LOCKED
             """
 
         @Language("PostgreSQL")
