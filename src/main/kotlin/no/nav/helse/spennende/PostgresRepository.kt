@@ -36,6 +36,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 WHERE sendt IS NULL AND utgående_melding IS NULL
                 GROUP BY person_id
                 HAVING MAX(neste_forfallstidspunkt) <= :naavaerendeTidspunkt
+                LIMIT 10000
             )
             SELECT p.id as person_id, p.fnr, e.siste_endringsmelding_id
             FROM person p
