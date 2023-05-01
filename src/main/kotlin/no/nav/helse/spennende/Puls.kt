@@ -5,26 +5,25 @@ import no.nav.helse.rapids_rivers.MessageContext
 import no.nav.helse.rapids_rivers.RapidsConnection
 import no.nav.helse.rapids_rivers.River
 import org.slf4j.LoggerFactory
-import java.time.LocalDateTime
 
 internal class Puls(
     rapidsConnection: RapidsConnection,
-    val repo: PostgresRepository,
-    val skalPulsere: (forrigePulsering: LocalDateTime) -> Boolean
+    val repo: PostgresRepository
 ) : River.PacketListener {
 
-    private var forrigePulsering = LocalDateTime.MIN
     private val publiclog = LoggerFactory.getLogger(Puls::class.java)
     private val logger = LoggerFactory.getLogger("tjenestekall")
 
     init {
-        River(rapidsConnection).register(this)
+        River(rapidsConnection)
+            .validate {
+                it.demandValue("@event_name", "minutt")
+            }
+            .register(this)
     }
 
     override fun onPacket(packet: JsonMessage, context: MessageContext) {
-        if (!skalPulsere(forrigePulsering)) return
         pulser(context)
-        forrigePulsering = LocalDateTime.now()
     }
 
     private fun pulser(context: MessageContext) {

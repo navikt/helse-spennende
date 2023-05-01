@@ -29,7 +29,7 @@ internal class PulserendeInfotrygdendringE2ETest {
         repository = PostgresRepository { PgDb.connection() }
         InfotrygdhendelseRiver(rapid, repository)
         InfotrygdhendelseBerikerRiver(rapid, repository)
-        Puls(rapid, repository) { true }
+        Puls(rapid, repository)
     }
 
     @AfterEach
@@ -165,7 +165,7 @@ internal class PulserendeInfotrygdendringE2ETest {
     }
 
     private fun puls() {
-        rapid.sendTestMessage("""{"@event_name": "ping"}""")
+        rapid.sendTestMessage("""{"@event_name": "minutt"}""")
     }
 
     private fun assertSendInfotrygdendringVedLøsning(fnr: String = fødselsnummer, aktørId: String = aktør) {

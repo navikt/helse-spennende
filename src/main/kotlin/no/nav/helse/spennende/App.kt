@@ -41,7 +41,7 @@ internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
         InfotrygdhendelseRiver(this, repo)
-        Puls(this, repo) { it < LocalDateTime.now().minusTilfeldigeSekunder(30) }
+        Puls(this, repo)
         InfotrygdhendelseBerikerRiver(this, repo)
     }.also { it.start() }
 }
