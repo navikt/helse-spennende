@@ -17,12 +17,12 @@ private val hikariConfig by lazy {
     HikariConfig().apply {
         jdbcUrl = String.format(
             "jdbc:postgresql://%s:%s/%s?user=%s",
-            env.getValue("NAIS_DATABASE_SPENNENDE_V2_SPENNENDE_HOST"),
-            env.getValue("NAIS_DATABASE_SPENNENDE_V2_SPENNENDE_PORT"),
-            env.getValue("NAIS_DATABASE_SPENNENDE_V2_SPENNENDE_DATABASE"),
-            env.getValue("NAIS_DATABASE_SPENNENDE_V2_SPENNENDE_USERNAME")
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_HOST"),
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PORT"),
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_DATABASE"),
+            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_USERNAME")
         )
-        password = env.getValue("NAIS_DATABASE_SPENNENDE_V2_SPENNENDE_PASSWORD")
+        password = env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PASSWORD")
         maximumPoolSize = 1
         connectionTimeout = Duration.ofSeconds(5).toMillis()
         maxLifetime = Duration.ofMinutes(30).toMillis()
