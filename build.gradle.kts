@@ -26,7 +26,7 @@ val junitJupiterVersion = "5.10.0"
 val testcontainersVersion = "1.19.0"
 
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2024010209171704183456.6d035b91ffb4")
+    implementation("com.github.navikt:rapids-and-rivers:2024020421191707077994.337b557194f1")
 
     implementation("org.postgresql:postgresql:42.6.0")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
