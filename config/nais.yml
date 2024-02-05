@@ -15,6 +15,9 @@ spec:
   readiness:
     path: isready
     initialDelay: 1
+  preStopHook:
+    http:
+      path: /stop
   resources:
     limits:
       memory: 2048Mi
