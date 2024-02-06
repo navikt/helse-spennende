@@ -1,4 +1,4 @@
 kafkaPool: nav-dev
 retentionHours: 120
-replikeringSecretName: kafka-infotrygd-replikering-nav-dev-l439y395
+replikeringSecretName: kafka-infotrygd-replikering-nav-dev-6p5gs
 sqlInstancesTier: db-f1-micro
