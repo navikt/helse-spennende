@@ -42,10 +42,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: deploy
-        uses: nais/deploy/actions/deploy@v1
+        uses: nais/deploy/actions/deploy@v2
         env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           RESOURCE: config/nais.yml,config/aiven.yml,config/infotrygd-replikering.yml
           IMAGE: ${{ needs.build.outputs.image }}
           CLUSTER: ${{ matrix.cluster }}
-          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           VARS: config/${{ matrix.cluster }}.yml
