@@ -23,7 +23,7 @@ private val hikariConfig by lazy {
             env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_USERNAME")
         )
         password = env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PASSWORD")
-        maximumPoolSize = 1
+        maximumPoolSize = 2
         connectionTimeout = Duration.ofSeconds(5).toMillis()
         maxLifetime = Duration.ofMinutes(30).toMillis()
         initializationFailTimeout = Duration.ofMinutes(1).toMillis()
