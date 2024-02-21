@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kotliquery.queryOf
 import kotliquery.sessionOf
-import kotliquery.using
 import org.flywaydb.core.Flyway
 import org.intellij.lang.annotations.Language
 import org.testcontainers.containers.PostgreSQLContainer
@@ -42,12 +41,30 @@ internal object PgDb {
     }
 
     private fun createSchema(dataSource: DataSource) {
-        Flyway.configure().dataSource(dataSource).initSql("create user cloudsqliamuser with encrypted password 'foo';").load().migrate()
-        using(sessionOf(dataSource)) { it.run(queryOf(truncateTablesSql).asExecute) }
+        @Language("PostgreSQL")
+        val initSql = """
+            DO
+${'$'}do${'$'}
+BEGIN
+   IF NOT EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE  rolname = 'cloudsqliamuser') THEN
+        create user cloudsqliamuser with encrypted password 'foo';
+    END IF;
+END
+${'$'}do${'$'};
+        """.trimIndent()
+        Flyway
+            .configure()
+            .dataSource(dataSource)
+            .initSql(initSql)
+            .load()
+            .migrate()
+        sessionOf(dataSource).use { it.run(queryOf(truncateTablesSql).asExecute) }
     }
 
     private fun resetSchema() {
-        using(sessionOf(connection())) { it.run(queryOf("SELECT truncate_tables();").asExecute) }
+        sessionOf(connection()).use { it.run(queryOf("SELECT truncate_tables();").asExecute) }
     }
 
     private fun stopDatabase() {
@@ -83,7 +100,6 @@ internal object PgDb {
             jdbcUrl = db.postgres.jdbcUrl
             username = db.postgres.username
             password = db.postgres.password
-            maximumPoolSize = 1
             connectionTimeout = Duration.ofSeconds(5).toMillis()
             maxLifetime = Duration.ofMinutes(30).toMillis()
             initializationFailTimeout = Duration.ofMinutes(1).toMillis()

@@ -19,19 +19,19 @@ repositories {
     maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
 }
 
-val flywayVersion = "8.4.3"
-val hikariVersion = "5.0.1"
+val flywayVersion = "10.8.1"
+val hikariVersion = "5.1.0"
 val kotliqueryVersion = "1.9.0"
 val junitJupiterVersion = "5.10.2"
-val testcontainersVersion = "1.19.0"
+val testcontainersVersion = "1.19.5"
 
 dependencies {
     implementation("com.github.navikt:rapids-and-rivers:2024020507581707116327.1c34df474331")
 
-    implementation("org.postgresql:postgresql:42.6.0")
+    implementation("org.postgresql:postgresql:42.7.2")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
     implementation("com.github.seratch:kotliquery:$kotliqueryVersion")
-    implementation("org.flywaydb:flyway-core:$flywayVersion")
+    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
