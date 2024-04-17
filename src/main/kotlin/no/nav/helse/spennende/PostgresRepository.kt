@@ -16,7 +16,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         private val publiclog = LoggerFactory.getLogger(PostgresRepository::class.java)
         private val logger = LoggerFactory.getLogger("tjenestekall")
 
-        private val nesteForfallUtsettelse = Duration.ofMinutes(5)
+        private val nesteForfallUtsettelse = Duration.ofMinutes(3)
         private val nesteForfallstidspunkt get() = now().truncatedTo(ChronoUnit.MINUTES) + nesteForfallUtsettelse
 
         @Language("PostgreSQL")
