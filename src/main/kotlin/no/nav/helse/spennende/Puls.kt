@@ -32,8 +32,8 @@ internal class Puls(
         logger.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
         repo.hentSendeklareEndringsmeldinger { melding ->
             publiserBehov(melding.endringsmeldingId, melding.fnr, context).also {
-                publiclog.info("Publiserer behov for endringsmeldingId ${melding.endringsmeldingId}")
-                logger.info("Publiserer behov for endringsmeldingId ${melding.endringsmeldingId} med fnr ${melding.fnr}")
+                //publiclog.info("Publiserer behov for endringsmeldingId ${melding.endringsmeldingId}")
+                //logger.info("Publiserer behov for endringsmeldingId ${melding.endringsmeldingId} med fnr ${melding.fnr}")
             }
         }
     }
