@@ -45,7 +45,7 @@ internal class InfotrygdhendelseBerikerRiver(rapidsConnection: RapidsConnection,
             keyValue("fnr", fnr)
         )
         publiserteEndringer.inc()
-        sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
+        //sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
         context.publish(fnr, utgående)
     }
 
