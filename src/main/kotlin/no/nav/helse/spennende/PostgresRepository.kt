@@ -97,8 +97,8 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         val endringsmeldingId: Long
     ) {
         internal fun oppdaterForfallstidspunkt(session: TransactionalSession) {
-            logger.info("Setter neste forfallstidspunkt for personId $personId fnr $fnr (endringsmeldingId $endringsmeldingId)")
-            publiclog.info("Setter neste forfallstidspunkt for personId $personId endringsmeldingId $endringsmeldingId")
+            //logger.info("Setter neste forfallstidspunkt for personId $personId fnr $fnr (endringsmeldingId $endringsmeldingId)")
+            //publiclog.info("Setter neste forfallstidspunkt for personId $personId endringsmeldingId $endringsmeldingId")
             setNesteForfallstidspunkt(session, personId)
         }
 
