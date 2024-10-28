@@ -16,9 +16,10 @@ internal class Puls(
 
     init {
         River(rapidsConnection)
-            .validate {
-                it.demandValue("@event_name", "minutt")
-            }
+            .validate { it.demandValue("@event_name", "minutt") }
+            .register(this)
+        River(rapidsConnection)
+            .validate { it.demandValue("@event_name", "kjør_spennende") }
             .register(this)
     }
 
