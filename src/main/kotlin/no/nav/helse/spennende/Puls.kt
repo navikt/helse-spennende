@@ -6,9 +6,11 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.retry.retryBlocking
 import com.github.navikt.tbd_libs.speed.SpeedClient
+import io.micrometer.core.instrument.Clock
 import io.micrometer.core.instrument.Counter
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import net.logstash.logback.argument.StructuredArguments.kv
 import org.slf4j.LoggerFactory
 
@@ -52,7 +54,7 @@ internal class Puls(
                 } else {
                     Counter.builder("publiserte_infotrygdendringer")
                         .description("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
-                        .register(PrometheusMeterRegistry(PrometheusConfig.DEFAULT))
+                        .register(PrometheusMeterRegistry(PrometheusConfig.DEFAULT, PrometheusRegistry.defaultRegistry, Clock.SYSTEM))
                         .increment()
                     //sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
                     context.publish(identer.fødselsnummer, utgående)
