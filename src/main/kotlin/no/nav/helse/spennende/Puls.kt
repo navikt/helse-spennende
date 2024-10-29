@@ -17,8 +17,7 @@ import org.slf4j.LoggerFactory
 
 internal class Puls(
     rapidsConnection: RapidsConnection,
-    val repo: PostgresRepository,
-    val speedClient: SpeedClient
+    val repo: PostgresRepository
 ) : River.PacketListener {
     private companion object {
         private val publiclog = LoggerFactory.getLogger(Puls::class.java)
@@ -43,12 +42,9 @@ internal class Puls(
         logger.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
         repo.hentSendeklareEndringsmeldinger { melding, dbsession ->
             try {
-                val aktørId = melding.aktørId ?: retryBlocking { speedClient.hentFødselsnummerOgAktørId(melding.fnr) }.aktørId.also {
-                    dbsession.run(queryOf("update person set aktor_id = ? where fnr = ?", it, melding.fnr).asUpdate)
-                }
                 val message = JsonMessage.newMessage("infotrygdendring", mapOf(
                     "fødselsnummer" to melding.fnr,
-                    "aktørId" to aktørId,
+                    "aktørId" to melding.aktørId,
                     "endringsmeldingId" to melding.endringsmeldingId
                 ))
                 val utgående = message.toJson()

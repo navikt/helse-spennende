@@ -42,6 +42,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             SELECT p.id as person_id, p.fnr, p.aktor_id, e.siste_endringsmelding_id
             FROM person p
             INNER JOIN alleIkkeSendteEndringsmeldinger e ON e.person_id=p.id
+            WHERE p.aktor_id IS NOT NULL
             FOR UPDATE SKIP LOCKED
             """
 
@@ -70,7 +71,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                     SendeklarEndringsmelding(
                         row.long("person_id"),
                         row.string("fnr"),
-                        row.stringOrNull("aktor_id"),
+                        row.string("aktor_id"),
                         row.long("siste_endringsmelding_id")
                     )
                 }.asList)
@@ -89,7 +90,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     internal class SendeklarEndringsmelding(
         private val personId: Long,
         val fnr: String,
-        val aktørId: String?,
+        val aktørId: String,
         val endringsmeldingId: Long
     ) {
         internal fun oppdaterForfallstidspunkt(session: TransactionalSession) {

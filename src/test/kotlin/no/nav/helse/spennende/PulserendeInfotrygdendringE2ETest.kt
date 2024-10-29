@@ -33,7 +33,7 @@ internal class PulserendeInfotrygdendringE2ETest {
         PgDb.start()
         repository = PostgresRepository { PgDb.connection() }
         InfotrygdhendelseRiver(rapid, repository, speedClient)
-        Puls(rapid, repository, speedClient)
+        Puls(rapid, repository)
     }
 
     @AfterEach
