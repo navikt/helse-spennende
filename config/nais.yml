@@ -60,4 +60,4 @@ spec:
     - name: KAFKA_EXTRA_TOPIC
       value: tbd.infotrygd.replikering.v1
     - name: KAFKA_RESET_POLICY
-      value: earliest
+      value: EARLIEST
