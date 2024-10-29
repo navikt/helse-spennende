@@ -2,18 +2,27 @@ package no.nav.helse.spennende
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.contains
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import com.github.navikt.tbd_libs.speed.IdentResponse
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.github.navikt.tbd_libs.test_support.TestDataSource
+import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import kotliquery.queryOf
 import kotliquery.sessionOf
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.clients.producer.RecordMetadata
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 
 internal class PulserendeInfotrygdendringE2ETest {
@@ -27,14 +36,47 @@ internal class PulserendeInfotrygdendringE2ETest {
 
     private lateinit var dataSource: TestDataSource
     private val speedClient = mockk<SpeedClient>()
-
+    private val sendteMeldinger = mutableListOf<ProducerRecord<String, String>>()
     @BeforeEach
     fun setup() {
         rapid.reset()
+        sendteMeldinger.clear()
         dataSource = databaseContainer.nyTilkobling()
         val repository = PostgresRepository { dataSource.ds }
         InfotrygdhendelseRiver(rapid, repository, speedClient)
-        Puls(rapid, repository)
+
+        val fabrikk = mockk<ConsumerProducerFactory>()
+        every { fabrikk.createProducer(any(), any()) } returns lagMockProducer()
+        Puls(rapid, repository, "tulletopic", fabrikk)
+    }
+
+    private fun lagMockProducer(): KafkaProducer<String, String> {
+        val mockProducer = mockk<KafkaProducer<String, String>>()
+
+        every { mockProducer.flush() } just Runs
+        every { mockProducer.close() } just Runs
+        every { mockProducer.send(capture(sendteMeldinger)) } returns object : Future<RecordMetadata> {
+            override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
+                TODO("Not yet implemented")
+            }
+
+            override fun isCancelled(): Boolean {
+                TODO("Not yet implemented")
+            }
+
+            override fun isDone(): Boolean {
+                TODO("Not yet implemented")
+            }
+
+            override fun get(): RecordMetadata? {
+                TODO("Not yet implemented")
+            }
+
+            override fun get(timeout: Long, unit: TimeUnit): RecordMetadata? {
+                TODO("Not yet implemented")
+            }
+        }
+        return mockProducer
     }
 
     @AfterEach
@@ -54,11 +96,11 @@ internal class PulserendeInfotrygdendringE2ETest {
         )
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
-        assertEquals(0, rapid.inspektør.size)
+        assertEquals(0, sendteMeldinger.size)
 
         setEndringsmeldingTilForfall(hendelseId)
         puls()
-        assertEquals(1, rapid.inspektør.size)
+        assertEquals(1, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning()
     }
 
@@ -77,14 +119,14 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId2))
         rapid.sendTestMessage(createTestMessage(hendelseId3))
         puls()
-        assertEquals(0, rapid.inspektør.size)
+        assertEquals(0, sendteMeldinger.size)
         setEndringsmeldingTilForfall(hendelseId1)
         setEndringsmeldingTilForfall(hendelseId2)
         puls()
-        assertEquals(0, rapid.inspektør.size)
+        assertEquals(0, sendteMeldinger.size)
         setEndringsmeldingTilForfall(hendelseId3)
         puls()
-        assertEquals(1, rapid.inspektør.size)
+        assertEquals(1, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning()
     }
 
@@ -117,21 +159,21 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId2, fnr = "2"))
         rapid.sendTestMessage(createTestMessage(hendelseId3, fnr = "3"))
         puls()
-        assertEquals(0, rapid.inspektør.size)
+        assertEquals(0, sendteMeldinger.size)
 
         setEndringsmeldingTilForfall(hendelseId1)
         puls()
-        assertEquals(1, rapid.inspektør.size)
+        assertEquals(1, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning(fnr = "1")
 
         setEndringsmeldingTilForfall(hendelseId2)
         puls()
-        assertEquals(2, rapid.inspektør.size)
+        assertEquals(2, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning(fnr = "2")
 
         setEndringsmeldingTilForfall(hendelseId3)
         puls()
-        assertEquals(3, rapid.inspektør.size)
+        assertEquals(3, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning(fnr = "3")
     }
 
@@ -140,7 +182,8 @@ internal class PulserendeInfotrygdendringE2ETest {
     }
 
     private fun assertSendInfotrygdendringVedLøsning(fnr: String = fødselsnummer, aktørId: String = aktør) {
-        assertSendtInfotrygdendring(rapid.sisteMelding(), fnr, aktørId)
+        val sisteMelding = jacksonObjectMapper().readTree(sendteMeldinger.last().value())
+        assertSendtInfotrygdendring(sisteMelding, fnr, aktørId)
     }
 
     private fun assertSendtInfotrygdendring(utgående: JsonNode, fnr: String, aktørId: String) {
@@ -149,8 +192,6 @@ internal class PulserendeInfotrygdendringE2ETest {
         assertEquals(fnr, utgående.path("fødselsnummer").asText())
         assertEquals(aktørId, utgående.path("aktørId").asText())
     }
-
-    fun TestRapid.sisteMelding() = inspektør.message(inspektør.size -1)
 
     private fun setEndringsmeldingTilForfall(hendelseId: Long) {
         sessionOf(dataSource.ds).use { session ->

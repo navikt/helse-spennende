@@ -3,6 +3,9 @@ package no.nav.helse.spennende
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
+import com.github.navikt.tbd_libs.kafka.AivenConfig
+import com.github.navikt.tbd_libs.kafka.AivenConfig.Companion
+import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.zaxxer.hikari.HikariConfig
@@ -36,10 +39,12 @@ private val hikariConfig by lazy {
 
 fun main() {
     val env = System.getenv()
-    startApplication(RapidApplication.create(env), hikariConfig, env)
+    val factory = ConsumerProducerFactory(AivenConfig.default)
+    val topicForInfotygdendringer = env.getValue("TOPIC_FOR_INFOTYGDENDRINGER")
+    startApplication(RapidApplication.create(env, factory), topicForInfotygdendringer, factory, hikariConfig, env)
 }
 
-internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: HikariConfig, env: Map<String, String>): RapidsConnection {
+internal fun startApplication(rapidsConnection: RapidsConnection, topicForInfotygdendringer: String, factory: ConsumerProducerFactory, hikariConfig: HikariConfig, env: Map<String, String>): RapidsConnection {
     val dataSourceInitializer = DataSourceInitializer(hikariConfig)
     val repo = PostgresRepository(dataSourceInitializer::dataSource)
 
@@ -50,7 +55,7 @@ internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
         InfotrygdhendelseRiver(this, repo, speedClient)
-        Puls(this, repo)
+        Puls(this, repo, topicForInfotygdendringer, factory)
     }.also { it.start() }
 }
 
