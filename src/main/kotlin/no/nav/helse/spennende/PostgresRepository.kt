@@ -42,7 +42,6 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             SELECT p.id as person_id, p.fnr, p.aktor_id, e.siste_endringsmelding_id
             FROM person p
             INNER JOIN alleIkkeSendteEndringsmeldinger e ON e.person_id=p.id
-            WHERE p.aktor_id IS NOT NULL
             FOR UPDATE SKIP LOCKED
             """
 
