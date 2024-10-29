@@ -77,6 +77,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 }.asList)
                 .also {
                     if (!it.isEmpty()){
+                        publiclog.info("Skal sende ${it.size} endringsmeldinger")
                         logger.info("Skal sende ${it.size} endringsmeldinger")
                     }
                 }
@@ -84,6 +85,12 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                     melding.oppdaterForfallstidspunkt(this)
                 }
                 .onEach { block(it, this) }
+                .also {
+                    if (!it.isEmpty()){
+                        publiclog.info("Har håndtert ${it.size} endringsmeldinger")
+                        logger.info("Har håndtert ${it.size} endringsmeldinger")
+                    }
+                }
         }
     }
 
