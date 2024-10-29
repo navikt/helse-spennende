@@ -23,8 +23,7 @@ val flywayVersion = "10.8.1"
 val hikariVersion = "5.1.0"
 val kotliqueryVersion = "1.9.0"
 val junitJupiterVersion = "5.10.2"
-val testcontainersVersion = "1.19.5"
-val tbdLibsVersion = "2024.10.29-10.55-dccf3336"
+val tbdLibsVersion = "2024.10.29-14.02-d0686476"
 val mockkVersion = "1.13.12"
 
 dependencies {
@@ -41,9 +40,7 @@ dependencies {
 
     testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-test:$tbdLibsVersion")
     testImplementation("io.mockk:mockk:$mockkVersion")
-    testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
-    testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
-    testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
+    testImplementation("com.github.navikt.tbd-libs:postgres-testdatabaser:$tbdLibsVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

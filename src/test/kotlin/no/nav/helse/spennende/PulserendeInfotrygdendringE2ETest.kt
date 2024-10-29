@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.contains
 import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import com.github.navikt.tbd_libs.speed.IdentResponse
 import com.github.navikt.tbd_libs.speed.SpeedClient
+import com.github.navikt.tbd_libs.test_support.TestDataSource
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -15,7 +16,6 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class PulserendeInfotrygdendringE2ETest {
 
     private val rapid = TestRapid()
@@ -25,26 +25,22 @@ internal class PulserendeInfotrygdendringE2ETest {
         private const val aktør = "aktør"
     }
 
-    private lateinit var repository: PostgresRepository
+    private lateinit var dataSource: TestDataSource
     private val speedClient = mockk<SpeedClient>()
 
-    @BeforeAll
-    fun createDatabase() {
-        PgDb.start()
-        repository = PostgresRepository { PgDb.connection() }
+    @BeforeEach
+    fun setup() {
+        rapid.reset()
+        dataSource = databaseContainer.nyTilkobling()
+        val repository = PostgresRepository { dataSource.ds }
         InfotrygdhendelseRiver(rapid, repository, speedClient)
         Puls(rapid, repository)
     }
 
     @AfterEach
     fun resetSchema() {
-        PgDb.reset()
+        databaseContainer.droppTilkobling(dataSource)
         clearAllMocks()
-    }
-
-    @BeforeEach
-    fun setup() {
-        rapid.reset()
     }
 
     @Test
@@ -157,7 +153,7 @@ internal class PulserendeInfotrygdendringE2ETest {
     fun TestRapid.sisteMelding() = inspektør.message(inspektør.size -1)
 
     private fun setEndringsmeldingTilForfall(hendelseId: Long) {
-        sessionOf(PgDb.connection()).use { session ->
+        sessionOf(dataSource.ds).use { session ->
             @Language("PostgreSQL")
             val sql = """
                 UPDATE endringsmelding 
