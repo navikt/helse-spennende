@@ -1,0 +1,1 @@
+alter table person add column aktor_id varchar;

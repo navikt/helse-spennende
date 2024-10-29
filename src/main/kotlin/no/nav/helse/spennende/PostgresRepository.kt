@@ -1,5 +1,6 @@
 package no.nav.helse.spennende
 
+import com.github.navikt.tbd_libs.speed.IdentResponse
 import kotliquery.Session
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
@@ -20,7 +21,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         private val nesteForfallstidspunkt get() = now().truncatedTo(ChronoUnit.MINUTES) + nesteForfallUtsettelse
 
         @Language("PostgreSQL")
-        private const val INSERT_PERSON = """INSERT INTO person (fnr) VALUES (:fnr) ON CONFLICT DO NOTHING"""
+        private const val INSERT_PERSON = """INSERT INTO person (fnr, aktor_id) VALUES (:fnr, :aktor_id) ON CONFLICT(fnr) DO UPDATE SET aktor_id = EXCLUDED.aktor_id"""
         @Language("PostgreSQL")
         private const val INSERT_ENDRINGSMELDING = """INSERT INTO endringsmelding (person_id, hendelse_id, innkommende_melding, neste_forfallstidspunkt) VALUES ((SELECT id FROM person WHERE fnr = :fnr), :hendelseId, :melding, :neste_forfallstidspunkt)"""
         @Language("PostgreSQL")
@@ -38,7 +39,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 HAVING MAX(neste_forfallstidspunkt) <= :naavaerendeTidspunkt
                 LIMIT 30000
             )
-            SELECT p.id as person_id, p.fnr, e.siste_endringsmelding_id
+            SELECT p.id as person_id, p.fnr, p.aktor_id, e.siste_endringsmelding_id
             FROM person p
             INNER JOIN alleIkkeSendteEndringsmeldinger e ON e.person_id=p.id
             FOR UPDATE SKIP LOCKED
@@ -69,6 +70,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                     SendeklarEndringsmelding(
                         row.long("person_id"),
                         row.string("fnr"),
+                        row.stringOrNull("aktor_id"),
                         row.long("siste_endringsmelding_id")
                     )
                 }.asList)
@@ -87,6 +89,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     internal class SendeklarEndringsmelding(
         private val personId: Long,
         val fnr: String,
+        val aktørId: String?,
         val endringsmeldingId: Long
     ) {
         internal fun oppdaterForfallstidspunkt(session: TransactionalSession) {
@@ -117,21 +120,24 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
         }
     }
 
-    internal fun lagreEndringsmelding(fnr: String, hendelseId: Long, json: String): Long =
-        requireNotNull(lagreEndringsmeldingOgReturnerId(fnr, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
+    internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String): Long =
+        requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
 
-    private fun lagreEndringsmeldingOgReturnerId(fnr: String, hendelseId: Long, json: String) =
+    private fun lagreEndringsmeldingOgReturnerId(identer: IdentResponse, hendelseId: Long, json: String) =
         sessionOf(dataSource, returnGeneratedKey = true).use { session ->
-            sikrePersonFinnes(session, fnr)
+            sikrePersonFinnes(session, identer)
             session.run(queryOf(INSERT_ENDRINGSMELDING, mapOf(
-                "fnr" to fnr,
+                "fnr" to identer.fødselsnummer,
                 "hendelseId" to hendelseId,
                 "melding" to json,
                 "neste_forfallstidspunkt" to nesteForfallstidspunkt
             )).asUpdateAndReturnGeneratedKey)
         }
 
-    private fun sikrePersonFinnes(session: Session, fnr: String) {
-        session.run(queryOf(INSERT_PERSON, mapOf("fnr" to fnr)).asExecute)
+    private fun sikrePersonFinnes(session: Session, identer: IdentResponse) {
+        session.run(queryOf(INSERT_PERSON, mapOf(
+            "fnr" to identer.fødselsnummer,
+            "aktor_id" to identer.aktørId
+        )).asExecute)
     }
 }

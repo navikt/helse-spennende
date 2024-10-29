@@ -49,7 +49,7 @@ internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: 
 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
-        InfotrygdhendelseRiver(this, repo)
+        InfotrygdhendelseRiver(this, repo, speedClient)
         Puls(this, repo, speedClient)
     }.also { it.start() }
 }

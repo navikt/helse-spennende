@@ -11,6 +11,7 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.metrics.model.registry.PrometheusRegistry
+import kotliquery.queryOf
 import net.logstash.logback.argument.StructuredArguments.kv
 import org.slf4j.LoggerFactory
 
@@ -42,22 +43,24 @@ internal class Puls(
         logger.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
         repo.hentSendeklareEndringsmeldinger { melding, dbsession ->
             try {
-                val identer = retryBlocking { speedClient.hentFødselsnummerOgAktørId(melding.fnr) }
+                val aktørId = melding.aktørId ?: retryBlocking { speedClient.hentFødselsnummerOgAktørId(melding.fnr) }.aktørId.also {
+                    dbsession.run(queryOf("update person set aktor_id = ? where fnr = ?", it, melding.fnr).asUpdate)
+                }
                 val message = JsonMessage.newMessage("infotrygdendring", mapOf(
-                    "fødselsnummer" to identer.fødselsnummer,
-                    "aktørId" to identer.aktørId,
+                    "fødselsnummer" to melding.fnr,
+                    "aktørId" to aktørId,
                     "endringsmeldingId" to melding.endringsmeldingId
                 ))
                 val utgående = message.toJson()
                 if (!melding.lagreUtgåendeMelding(dbsession, utgående)) {
-                    logger.warn("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående", kv("endringsmeldingId", melding.endringsmeldingId), kv("fnr", identer.fødselsnummer))
+                    logger.warn("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående", kv("endringsmeldingId", melding.endringsmeldingId), kv("fnr", melding.fnr))
                 } else {
                     Counter.builder("publiserte_infotrygdendringer")
                         .description("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
                         .register(PrometheusMeterRegistry(PrometheusConfig.DEFAULT, PrometheusRegistry.defaultRegistry, Clock.SYSTEM))
                         .increment()
                     //sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
-                    context.publish(identer.fødselsnummer, utgående)
+                    context.publish(melding.fnr, utgående)
                 }
             } catch (err: Exception) {
                 publiclog.error("Klarte ikke hente ident for endringsmelding: ${err.message}", err)

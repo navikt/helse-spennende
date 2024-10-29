@@ -32,7 +32,7 @@ internal class PulserendeInfotrygdendringE2ETest {
     fun createDatabase() {
         PgDb.start()
         repository = PostgresRepository { PgDb.connection() }
-        InfotrygdhendelseRiver(rapid, repository)
+        InfotrygdhendelseRiver(rapid, repository, speedClient)
         Puls(rapid, repository, speedClient)
     }
 
@@ -50,16 +50,15 @@ internal class PulserendeInfotrygdendringE2ETest {
     @Test
     fun `publiserer endring først etter fem minutter`() {
         val hendelseId = 1234567L
-        rapid.sendTestMessage(createTestMessage(hendelseId))
-        puls()
-        assertEquals(0, rapid.inspektør.size)
-
         every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
             fødselsnummer = fødselsnummer,
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
         )
+        rapid.sendTestMessage(createTestMessage(hendelseId))
+        puls()
+        assertEquals(0, rapid.inspektør.size)
 
         setEndringsmeldingTilForfall(hendelseId)
         puls()
@@ -72,6 +71,12 @@ internal class PulserendeInfotrygdendringE2ETest {
         val hendelseId1 = 1234567L
         val hendelseId2 = 2234567L
         val hendelseId3 = 3234567L
+        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
+            fødselsnummer = fødselsnummer,
+            aktørId = aktør,
+            npid = null,
+            kilde = IdentResponse.KildeResponse.PDL
+        )
         rapid.sendTestMessage(createTestMessage(hendelseId1))
         rapid.sendTestMessage(createTestMessage(hendelseId2))
         rapid.sendTestMessage(createTestMessage(hendelseId3))
@@ -82,12 +87,6 @@ internal class PulserendeInfotrygdendringE2ETest {
         puls()
         assertEquals(0, rapid.inspektør.size)
         setEndringsmeldingTilForfall(hendelseId3)
-        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
-            fødselsnummer = fødselsnummer,
-            aktørId = aktør,
-            npid = null,
-            kilde = IdentResponse.KildeResponse.PDL
-        )
         puls()
         assertEquals(1, rapid.inspektør.size)
         assertSendInfotrygdendringVedLøsning()
@@ -98,13 +97,6 @@ internal class PulserendeInfotrygdendringE2ETest {
         val hendelseId1 = 1234567L
         val hendelseId2 = 2234567L
         val hendelseId3 = 3234567L
-        rapid.sendTestMessage(createTestMessage(hendelseId1, fnr = "1"))
-        rapid.sendTestMessage(createTestMessage(hendelseId2, fnr = "2"))
-        rapid.sendTestMessage(createTestMessage(hendelseId3, fnr = "3"))
-        puls()
-        assertEquals(0, rapid.inspektør.size)
-
-        setEndringsmeldingTilForfall(hendelseId1)
 
         every { speedClient.hentFødselsnummerOgAktørId(ident = "1", any()) } returns IdentResponse(
             fødselsnummer = "1",
@@ -112,29 +104,36 @@ internal class PulserendeInfotrygdendringE2ETest {
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
         )
-
-        puls()
-        assertEquals(1, rapid.inspektør.size)
-        assertSendInfotrygdendringVedLøsning(fnr = "1")
-
-        setEndringsmeldingTilForfall(hendelseId2)
         every { speedClient.hentFødselsnummerOgAktørId(ident = "2", any()) } returns IdentResponse(
             fødselsnummer = "2",
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
         )
-        puls()
-        assertEquals(2, rapid.inspektør.size)
-        assertSendInfotrygdendringVedLøsning(fnr = "2")
-
-        setEndringsmeldingTilForfall(hendelseId3)
         every { speedClient.hentFødselsnummerOgAktørId(ident = "3", any()) } returns IdentResponse(
             fødselsnummer = "3",
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
         )
+
+        rapid.sendTestMessage(createTestMessage(hendelseId1, fnr = "1"))
+        rapid.sendTestMessage(createTestMessage(hendelseId2, fnr = "2"))
+        rapid.sendTestMessage(createTestMessage(hendelseId3, fnr = "3"))
+        puls()
+        assertEquals(0, rapid.inspektør.size)
+
+        setEndringsmeldingTilForfall(hendelseId1)
+        puls()
+        assertEquals(1, rapid.inspektør.size)
+        assertSendInfotrygdendringVedLøsning(fnr = "1")
+
+        setEndringsmeldingTilForfall(hendelseId2)
+        puls()
+        assertEquals(2, rapid.inspektør.size)
+        assertSendInfotrygdendringVedLøsning(fnr = "2")
+
+        setEndringsmeldingTilForfall(hendelseId3)
         puls()
         assertEquals(3, rapid.inspektør.size)
         assertSendInfotrygdendringVedLøsning(fnr = "3")
