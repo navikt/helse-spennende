@@ -59,7 +59,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             session.transaction { f(it) }
         }
 
-    internal fun hentSendeklareEndringsmeldinger(block: (SendeklarEndringsmelding) -> Unit) {
+    internal fun hentSendeklareEndringsmeldinger(block: (SendeklarEndringsmelding, TransactionalSession) -> Unit) {
         transactionally {
             run(
                 queryOf(
@@ -80,15 +80,9 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                 .onEach { melding ->
                     melding.oppdaterForfallstidspunkt(this)
                 }
-                .onEach(block)
+                .onEach { block(it, this) }
         }
     }
-
-    private fun markerEndringsmeldingerSomSendt(session: TransactionalSession, endringsmeldingId: Long) =
-        session.run(queryOf(MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
-            "endringsmeldingId" to endringsmeldingId,
-            "naavaerendeTidspunkt" to now()
-        )).asUpdate) > 0
 
     internal class SendeklarEndringsmelding(
         private val personId: Long,
@@ -101,6 +95,20 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             setNesteForfallstidspunkt(session, personId)
         }
 
+        internal fun lagreUtgåendeMelding(session: TransactionalSession, json: String): Boolean {
+            if (!markerEndringsmeldingerSomSendt(session, endringsmeldingId)) return false
+            return session.run(queryOf(UPDATE_UTGÅENDE, mapOf(
+                "endringsmeldingId" to endringsmeldingId,
+                "melding" to json
+            )).asUpdate) == 1
+        }
+
+        private fun markerEndringsmeldingerSomSendt(session: TransactionalSession, endringsmeldingId: Long) =
+            session.run(queryOf(MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
+                "endringsmeldingId" to endringsmeldingId,
+                "naavaerendeTidspunkt" to now()
+            )).asUpdate) > 0
+
         private fun setNesteForfallstidspunkt(session: TransactionalSession, personId: Long) {
             session.run(queryOf(SET_NESTE_FORFALLSDATO_FOR_PERSON, mapOf(
                 "person_id" to personId,
@@ -111,16 +119,6 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
     internal fun lagreEndringsmelding(fnr: String, hendelseId: Long, json: String): Long =
         requireNotNull(lagreEndringsmeldingOgReturnerId(fnr, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
-
-    internal fun lagreUtgåendeMelding(endringsmeldingId: Long, json: String): Boolean {
-        return transactionally {
-            if (!markerEndringsmeldingerSomSendt(this, endringsmeldingId)) return@transactionally false
-            run(queryOf(UPDATE_UTGÅENDE, mapOf(
-                "endringsmeldingId" to endringsmeldingId,
-                "melding" to json
-            )).asUpdate) == 1
-        }
-    }
 
     private fun lagreEndringsmeldingOgReturnerId(fnr: String, hendelseId: Long, json: String) =
         sessionOf(dataSource, returnGeneratedKey = true).use { session ->

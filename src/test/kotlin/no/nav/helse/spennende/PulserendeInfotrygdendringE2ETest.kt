@@ -1,8 +1,12 @@
 package no.nav.helse.spennende
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.contains
+import com.github.navikt.tbd_libs.speed.IdentResponse
+import com.github.navikt.tbd_libs.speed.SpeedClient
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
 import kotliquery.queryOf
 import kotliquery.sessionOf
 import no.nav.helse.rapids_rivers.testsupport.TestRapid
@@ -22,19 +26,20 @@ internal class PulserendeInfotrygdendringE2ETest {
     }
 
     private lateinit var repository: PostgresRepository
+    private val speedClient = mockk<SpeedClient>()
 
     @BeforeAll
     fun createDatabase() {
         PgDb.start()
         repository = PostgresRepository { PgDb.connection() }
         InfotrygdhendelseRiver(rapid, repository)
-        InfotrygdhendelseBerikerRiver(rapid, repository)
-        Puls(rapid, repository)
+        Puls(rapid, repository, speedClient)
     }
 
     @AfterEach
     fun resetSchema() {
         PgDb.reset()
+        clearAllMocks()
     }
 
     @BeforeEach
@@ -48,10 +53,18 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
         assertEquals(0, rapid.inspektør.size)
+
+        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
+            fødselsnummer = fødselsnummer,
+            aktørId = aktør,
+            npid = null,
+            kilde = IdentResponse.KildeResponse.PDL
+        )
+
         setEndringsmeldingTilForfall(hendelseId)
         puls()
         assertEquals(1, rapid.inspektør.size)
-        assertSendtBehov()
+        assertSendInfotrygdendringVedLøsning()
     }
 
     @Test
@@ -69,10 +82,17 @@ internal class PulserendeInfotrygdendringE2ETest {
         puls()
         assertEquals(0, rapid.inspektør.size)
         setEndringsmeldingTilForfall(hendelseId3)
+        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
+            fødselsnummer = fødselsnummer,
+            aktørId = aktør,
+            npid = null,
+            kilde = IdentResponse.KildeResponse.PDL
+        )
         puls()
         assertEquals(1, rapid.inspektør.size)
-        assertSendtBehov()
+        assertSendInfotrygdendringVedLøsning()
     }
+
     @Test
     fun `flere infotrygdendringer på ulike personer`() {
         val hendelseId1 = 1234567L
@@ -85,83 +105,39 @@ internal class PulserendeInfotrygdendringE2ETest {
         assertEquals(0, rapid.inspektør.size)
 
         setEndringsmeldingTilForfall(hendelseId1)
+
+        every { speedClient.hentFødselsnummerOgAktørId(ident = "1", any()) } returns IdentResponse(
+            fødselsnummer = "1",
+            aktørId = aktør,
+            npid = null,
+            kilde = IdentResponse.KildeResponse.PDL
+        )
+
         puls()
         assertEquals(1, rapid.inspektør.size)
-        assertSendtBehov(fnr = "1")
-        assertSendInfotrygdendringVedLøsning()
+        assertSendInfotrygdendringVedLøsning(fnr = "1")
 
         setEndringsmeldingTilForfall(hendelseId2)
+        every { speedClient.hentFødselsnummerOgAktørId(ident = "2", any()) } returns IdentResponse(
+            fødselsnummer = "2",
+            aktørId = aktør,
+            npid = null,
+            kilde = IdentResponse.KildeResponse.PDL
+        )
         puls()
-        assertEquals(3, rapid.inspektør.size)
-        assertSendtBehov(fnr = "2")
-        assertSendInfotrygdendringVedLøsning()
+        assertEquals(2, rapid.inspektør.size)
+        assertSendInfotrygdendringVedLøsning(fnr = "2")
 
         setEndringsmeldingTilForfall(hendelseId3)
+        every { speedClient.hentFødselsnummerOgAktørId(ident = "3", any()) } returns IdentResponse(
+            fødselsnummer = "3",
+            aktørId = aktør,
+            npid = null,
+            kilde = IdentResponse.KildeResponse.PDL
+        )
         puls()
-        assertEquals(5, rapid.inspektør.size)
-        assertSendtBehov(fnr = "3")
-        assertSendInfotrygdendringVedLøsning()
-    }
-
-    @Test
-    fun `publiserer infotrygdendring når vi mottar løsning på behov`() {
-        val hendelseId = 1234567L
-        rapid.sendTestMessage(createTestMessage(hendelseId))
-        puls()
-        assertEquals(0, rapid.inspektør.size)
-        setEndringsmeldingTilForfall(hendelseId)
-        puls()
-        assertEquals(1, rapid.inspektør.size)
-        assertSendtBehov()
-        assertSendInfotrygdendringVedLøsning()
-    }
-
-    @Test
-    fun `mottar ikke løsning på behovet før neste puls - retry`() {
-        val hendelseId = 1234567L
-        rapid.sendTestMessage(createTestMessage(hendelseId))
-        puls()
-        assertEquals(0, rapid.inspektør.size)
-        setEndringsmeldingTilForfall(hendelseId)
-        puls()
-        assertEquals(1, rapid.inspektør.size)
-        assertSendtBehov()
-        setEndringsmeldingTilForfall(hendelseId)
-        puls()
-        assertEquals(2, rapid.inspektør.size)
-    }
-
-    @Test
-    fun `mottar ikke løsning på behovet før neste puls - mottar to løsninger for samme endringsmelding`() {
-        val hendelseId = 1234567L
-        rapid.sendTestMessage(createTestMessage(hendelseId))
-        puls()
-        assertEquals(0, rapid.inspektør.size)
-        setEndringsmeldingTilForfall(hendelseId)
-        puls()
-        assertEquals(1, rapid.inspektør.size)
-        assertSendtBehov()
-        setEndringsmeldingTilForfall(hendelseId)
-        puls()
-        assertEquals(2, rapid.inspektør.size)
-        assertSendInfotrygdendringVedLøsning()
-        val sizeFør = rapid.inspektør.size
-        sendLøsningPåBehov()
-        val sizeEtter = rapid.inspektør.size
-        assertEquals(sizeFør, sizeEtter)
-    }
-
-    @Test
-    fun `reagerer ikke på behov med løsning uten @final`() {
-        val hendelseId = 1234567L
-        rapid.sendTestMessage(createTestMessage(hendelseId))
-        setEndringsmeldingTilForfall(hendelseId)
-        puls()
-        assertEquals(1, rapid.inspektør.size)
-        rapid.sendTestMessage(rapid.inspektør.message(0).medLøsning(fødselsnummer, "aktørid").apply {
-            remove("@final")
-        }.toString())
-        assertEquals(1, rapid.inspektør.size)
+        assertEquals(3, rapid.inspektør.size)
+        assertSendInfotrygdendringVedLøsning(fnr = "3")
     }
 
     private fun puls() {
@@ -169,7 +145,6 @@ internal class PulserendeInfotrygdendringE2ETest {
     }
 
     private fun assertSendInfotrygdendringVedLøsning(fnr: String = fødselsnummer, aktørId: String = aktør) {
-        sendLøsningPåBehov(fnr, aktørId)
         assertSendtInfotrygdendring(rapid.sisteMelding(), fnr, aktørId)
     }
 
@@ -180,32 +155,7 @@ internal class PulserendeInfotrygdendringE2ETest {
         assertEquals(aktørId, utgående.path("aktørId").asText())
     }
 
-    private fun sendLøsningPåBehov(fnr: String = fødselsnummer, aktørId: String = aktør) {
-        rapid.sendTestMessage(rapid.sisteBehov().medLøsning(fnr, aktørId).toString())
-    }
-
     fun TestRapid.sisteMelding() = inspektør.message(inspektør.size -1)
-    fun TestRapid.sisteBehov(): JsonNode {
-        val index = (0 until inspektør.size).last { inspektør.message(it).path("@event_name").asText() == "behov" }
-        return rapid.inspektør.message(index)
-    }
-
-
-    private fun JsonNode.medLøsning(fnr: String, aktørId: String) = (this as ObjectNode).apply {
-        putObject("@løsning").apply {
-            putObject("HentIdenter").apply {
-                put("fødselsnummer", fnr)
-                put("aktørId", aktørId)
-            }
-        }
-        put("@final", true)
-    }
-
-    private fun assertSendtBehov(fnr: String = fødselsnummer) {
-        assertEquals("behov", rapid.sisteMelding().path("@event_name").asText())
-        assertEquals("HentIdenter", rapid.sisteMelding().path("@behov").single().asText())
-        assertEquals(fnr, rapid.sisteMelding().path("ident").asText())
-    }
 
     private fun setEndringsmeldingTilForfall(hendelseId: Long) {
         sessionOf(PgDb.connection()).use { session ->

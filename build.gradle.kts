@@ -24,6 +24,8 @@ val hikariVersion = "5.1.0"
 val kotliqueryVersion = "1.9.0"
 val junitJupiterVersion = "5.10.2"
 val testcontainersVersion = "1.19.5"
+val tbdLibsVersion = "2024.10.29-10.55-dccf3336"
+val mockkVersion = "1.13.12"
 
 dependencies {
     implementation("com.github.navikt:rapids-and-rivers:2024020507581707116327.1c34df474331")
@@ -33,6 +35,11 @@ dependencies {
     implementation("com.github.seratch:kotliquery:$kotliqueryVersion")
     implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
+    api("com.github.navikt.tbd-libs:azure-token-client-default:$tbdLibsVersion")
+    api("com.github.navikt.tbd-libs:retry:$tbdLibsVersion")
+    api("com.github.navikt.tbd-libs:speed-client:$tbdLibsVersion")
+
+    testImplementation("io.mockk:mockk:$mockkVersion")
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
     testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")

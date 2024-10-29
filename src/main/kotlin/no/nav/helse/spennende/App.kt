@@ -1,13 +1,17 @@
 package no.nav.helse.spennende
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
+import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.rapids_rivers.RapidsConnection
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
+import java.net.http.HttpClient
 import java.time.Duration
-import java.time.LocalDateTime
 import javax.sql.DataSource
 
 private val log = LoggerFactory.getLogger("no.nav.helse.spennende.App")
@@ -32,22 +36,23 @@ private val hikariConfig by lazy {
 
 fun main() {
     val env = System.getenv()
-    startApplication(RapidApplication.create(env), hikariConfig)
+    startApplication(RapidApplication.create(env), hikariConfig, env)
 }
 
-internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: HikariConfig): RapidsConnection {
+internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: HikariConfig, env: Map<String, String>): RapidsConnection {
     val dataSourceInitializer = DataSourceInitializer(hikariConfig)
     val repo = PostgresRepository(dataSourceInitializer::dataSource)
+
+    val httpClient: HttpClient = HttpClient.newHttpClient()
+    val azureClient = createAzureTokenClientFromEnvironment(env)
+    val speedClient = SpeedClient(httpClient, jacksonObjectMapper().registerModule(JavaTimeModule()), azureClient)
+
     return rapidsConnection.apply {
         register(dataSourceInitializer)
         InfotrygdhendelseRiver(this, repo)
-        Puls(this, repo)
-        InfotrygdhendelseBerikerRiver(this, repo)
+        Puls(this, repo, speedClient)
     }.also { it.start() }
 }
-
-internal fun LocalDateTime.minusTilfeldigeSekunder(sekunder: Int) =
-    if (sekunder < 1) this else this.minusSeconds((15..sekunder).random().toLong())
 
 private class DataSourceInitializer(private val hikariConfig: HikariConfig) : RapidsConnection.StatusListener {
     internal val dataSource: DataSource by lazy { HikariDataSource(hikariConfig) }

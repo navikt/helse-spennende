@@ -32,6 +32,14 @@ spec:
     path: /metrics
   secureLogs:
     enabled: true
+  accessPolicy:
+    outbound:
+      rules:
+        - application: speed-api
+  azure:
+    application:
+      enabled: true
+      tenant: nav.no
   gcp:
     sqlInstances:
       - type: POSTGRES_15
