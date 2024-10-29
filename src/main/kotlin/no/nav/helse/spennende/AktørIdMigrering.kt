@@ -36,10 +36,14 @@ internal class AktørIdMigrering(
 
     override fun onPacket(packet: JsonMessage, context: MessageContext) {
         val fnr = packet["fødselsnummer"].asText()
-        retryBlocking { speedClient.hentFødselsnummerOgAktørId(fnr) }.aktørId.also { aktørId ->
-            sessionOf(dataSourceGetter()).use { session ->
-                session.run(queryOf("update person set aktor_id = ? where fnr = ?", aktørId, fnr).asUpdate)
+        try {
+            retryBlocking { speedClient.hentFødselsnummerOgAktørId(fnr) }.aktørId.also { aktørId ->
+                sessionOf(dataSourceGetter()).use { session ->
+                    session.run(queryOf("update person set aktor_id = ? where fnr = ?", aktørId, fnr).asUpdate)
+                }
             }
+        } catch (err: Exception) {
+            logger.error("{} lot seg ikke migrere: ${err.message}", kv("fødselsnummer", fnr), err)
         }
     }
 }
