@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm") version "2.0.20"
 }
 
 repositories {
@@ -28,7 +28,7 @@ val tbdLibsVersion = "2024.10.29-10.55-dccf3336"
 val mockkVersion = "1.13.12"
 
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2024020507581707116327.1c34df474331")
+    implementation("com.github.navikt:rapids-and-rivers:2024082715011724763661.50d7efb40f0f")
 
     implementation("org.postgresql:postgresql:42.7.2")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
@@ -39,6 +39,7 @@ dependencies {
     api("com.github.navikt.tbd-libs:retry:$tbdLibsVersion")
     api("com.github.navikt.tbd-libs:speed-client:$tbdLibsVersion")
 
+    testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-test:$tbdLibsVersion")
     testImplementation("io.mockk:mockk:$mockkVersion")
     testImplementation("org.testcontainers:postgresql:$testcontainersVersion")
     testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")

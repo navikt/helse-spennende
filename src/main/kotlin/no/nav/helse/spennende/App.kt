@@ -3,11 +3,11 @@ package no.nav.helse.spennende
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import no.nav.helse.rapids_rivers.RapidApplication
-import no.nav.helse.rapids_rivers.RapidsConnection
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
 import java.net.http.HttpClient

@@ -1,13 +1,15 @@
 package no.nav.helse.spennende
 
+import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
+import com.github.navikt.tbd_libs.rapids_and_rivers.River
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.retry.retryBlocking
 import com.github.navikt.tbd_libs.speed.SpeedClient
-import io.prometheus.client.Counter
+import io.micrometer.core.instrument.Counter
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import net.logstash.logback.argument.StructuredArguments.kv
-import no.nav.helse.rapids_rivers.JsonMessage
-import no.nav.helse.rapids_rivers.MessageContext
-import no.nav.helse.rapids_rivers.RapidsConnection
-import no.nav.helse.rapids_rivers.River
 import org.slf4j.LoggerFactory
 
 internal class Puls(
@@ -18,11 +20,6 @@ internal class Puls(
     private companion object {
         private val publiclog = LoggerFactory.getLogger(Puls::class.java)
         private val logger = LoggerFactory.getLogger("tjenestekall")
-        private val publiserteEndringer = Counter
-            .build()
-            .name("publiserte_infotrygdendringer")
-            .help("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
-            .register()
     }
 
     init {
@@ -53,7 +50,10 @@ internal class Puls(
                 if (!melding.lagreUtgåendeMelding(dbsession, utgående)) {
                     logger.warn("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående", kv("endringsmeldingId", melding.endringsmeldingId), kv("fnr", identer.fødselsnummer))
                 } else {
-                    publiserteEndringer.inc()
+                    Counter.builder("publiserte_infotrygdendringer")
+                        .description("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
+                        .register(PrometheusMeterRegistry(PrometheusConfig.DEFAULT))
+                        .increment()
                     //sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
                     context.publish(identer.fødselsnummer, utgående)
                 }

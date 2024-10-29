@@ -2,6 +2,7 @@ package no.nav.helse.spennende
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.contains
+import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import com.github.navikt.tbd_libs.speed.IdentResponse
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import io.mockk.clearAllMocks
@@ -9,7 +10,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotliquery.queryOf
 import kotliquery.sessionOf
-import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals

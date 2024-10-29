@@ -1,20 +1,20 @@
 package no.nav.helse.spennende
 
-import io.prometheus.client.Counter
+import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
+import com.github.navikt.tbd_libs.rapids_and_rivers.River
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import io.micrometer.core.instrument.Counter
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import net.logstash.logback.argument.StructuredArguments
-import no.nav.helse.rapids_rivers.*
 import org.slf4j.LoggerFactory
 
 internal class InfotrygdhendelseRiver(rapidsConnection: RapidsConnection, val repo: PostgresRepository) : River.PacketListener {
 
     private companion object {
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
-        private val endringer = Counter
-            .build()
-            .name("infotrygdendringer")
-            .labelNames("tabellnavn")
-            .help("Teller alle innkommende infotrygdendringer, og angir tabellnavn")
-            .register()
     }
     init {
         River(rapidsConnection).apply {
@@ -33,7 +33,12 @@ internal class InfotrygdhendelseRiver(rapidsConnection: RapidsConnection, val re
         try {
             val endringsmeldingId = repo.lagreEndringsmelding(fnr, hendelseId, packet.toJson())
             sikkerlogg.info("leste infotrygdendring som ble lagret med endringsmeldingId $endringsmeldingId for fnr $fnr")
-            endringer.labels(packet["after.TABELLNAVN"].asText()).inc()
+
+            Counter.builder("infotrygdendringer")
+                .description("Teller alle innkommende infotrygdendringer, og angir tabellnavn")
+                .tag("tabellnavn", packet["after.TABELLNAVN"].asText())
+                .register(PrometheusMeterRegistry(PrometheusConfig.DEFAULT))
+                .increment()
         } catch (err: Exception) {
             sikkerlogg.error("Feil ved lagring av endringsmelding for {} {}: {}",
                 StructuredArguments.keyValue("hendelse_id", hendelseId),
