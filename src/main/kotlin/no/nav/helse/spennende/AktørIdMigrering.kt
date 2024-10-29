@@ -36,9 +36,9 @@ internal class AktørIdMigrering(
 
     override fun onPacket(packet: JsonMessage, context: MessageContext) {
         val fnr = packet["fødselsnummer"].asText()
-        retryBlocking { speedClient.hentFødselsnummerOgAktørId(fnr) }.aktørId.also {
-            sessionOf(dataSourceGetter()).use {
-                it.run(queryOf("update person set aktor_id = ? where fnr = ?", it, fnr).asUpdate)
+        retryBlocking { speedClient.hentFødselsnummerOgAktørId(fnr) }.aktørId.also { aktørId ->
+            sessionOf(dataSourceGetter()).use { session ->
+                session.run(queryOf("update person set aktor_id = ? where fnr = ?", aktørId, fnr).asUpdate)
             }
         }
     }
