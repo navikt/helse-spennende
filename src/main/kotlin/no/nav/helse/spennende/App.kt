@@ -49,7 +49,6 @@ internal fun startApplication(rapidsConnection: RapidsConnection, hikariConfig: 
 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
-        AktørIdMigrering(this, dataSourceInitializer::dataSource, speedClient)
         InfotrygdhendelseRiver(this, repo, speedClient)
         Puls(this, repo)
     }.also { it.start() }
