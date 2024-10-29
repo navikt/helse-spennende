@@ -72,10 +72,10 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
                         row.long("siste_endringsmelding_id")
                     )
                 }.asList)
-                .also{
-                    /*if (!it.isEmpty()){
-                        logger.info("Personer: {}", it.joinToString { "${it.fnr} - ${it.endringsmeldingId}" })
-                    }*/
+                .also {
+                    if (!it.isEmpty()){
+                        logger.info("Skal sende ${it.size} endringsmeldinger")
+                    }
                 }
                 .onEach { melding ->
                     melding.oppdaterForfallstidspunkt(this)
