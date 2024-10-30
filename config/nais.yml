@@ -39,7 +39,7 @@ spec:
   azure:
     application:
       enabled: true
-      tenant: nav.no
+      tenant: {{tenant}}
   gcp:
     sqlInstances:
       - type: POSTGRES_15
