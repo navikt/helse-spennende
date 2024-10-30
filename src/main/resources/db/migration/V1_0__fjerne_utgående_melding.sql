@@ -1,0 +1,1 @@
+alter table endringsmelding drop column utgående_melding;

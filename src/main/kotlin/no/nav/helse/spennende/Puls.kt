@@ -10,7 +10,6 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.metrics.model.registry.PrometheusRegistry
-import net.logstash.logback.argument.StructuredArguments.kv
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.slf4j.LoggerFactory
@@ -48,7 +47,7 @@ internal class Puls(
     private fun pulser(producer: KafkaProducer<String, String>, context: MessageContext) {
         publiclog.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
         logger.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
-        repo.hentSendeklareEndringsmeldinger { melding, dbsession ->
+        repo.hentSendeklareEndringsmeldinger { melding ->
             try {
                 val message = JsonMessage.newMessage("infotrygdendring", mapOf(
                     "fødselsnummer" to melding.fnr,
@@ -56,13 +55,9 @@ internal class Puls(
                     "endringsmeldingId" to melding.endringsmeldingId
                 ))
                 val utgående = message.toJson()
-                if (!melding.lagreUtgåendeMelding(dbsession, utgående)) {
-                    logger.warn("republiserer ikke melding fordi vi klarte ikke lagre til db for {} {}:\n$utgående", kv("endringsmeldingId", melding.endringsmeldingId), kv("fnr", melding.fnr))
-                } else {
-                    publiserteEndringer.increment()
-                    //sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
-                    producer.send(ProducerRecord(topic, melding.fnr, utgående))
-                }
+                publiserteEndringer.increment()
+                //sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
+                producer.send(ProducerRecord(topic, melding.fnr, utgående))
             } catch (err: Exception) {
                 publiclog.error("Klarte ikke hente ident for endringsmelding: ${err.message}", err)
                 logger.error("Klarte ikke hente ident for endringsmelding (se sikker logg)")
