@@ -10,6 +10,7 @@ import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.micrometer.core.instrument.Clock
+import io.micrometer.core.instrument.Counter
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.metrics.model.registry.PrometheusRegistry
@@ -50,7 +51,7 @@ fun main() {
 
     val producer = when {
         env["HINDRE_UTSENDING"].toBoolean() -> InfotrygdendringProducer.TomProducer()
-        else -> InfotrygdendringProducer.RapidProducer(topicForInfotygdendringer, factory.createProducer(withShutdownHook = true))
+        else -> InfotrygdendringProducer.RapidProducer(topicForInfotygdendringer, factory.createProducer(withShutdownHook = true), meterRegistry)
     }
     val infotrygdendringutsending = Infotrygdendringutsender(producer)
 
@@ -103,8 +104,13 @@ interface InfotrygdendringProducer {
         }
         override fun tømKø() {}
     }
-    class RapidProducer(val topic: String, val kafkaProducer: KafkaProducer<String, String>) : InfotrygdendringProducer {
+    class RapidProducer(val topic: String, val kafkaProducer: KafkaProducer<String, String>, meterRegistry: PrometheusMeterRegistry) : InfotrygdendringProducer {
+        private val publiserteEndringer = Counter.builder("publiserte_infotrygdendringer")
+            .description("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
+            .register(meterRegistry)
+
         override fun sendEndringsmelding(fnr: String, melding: String) {
+            publiserteEndringer.increment()
             kafkaProducer.send(ProducerRecord(topic, fnr, melding))
         }
 
