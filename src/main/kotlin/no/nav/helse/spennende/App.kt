@@ -14,6 +14,8 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.helse.rapids_rivers.RapidApplication
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.clients.producer.ProducerRecord
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
 import java.net.http.HttpClient
@@ -45,10 +47,17 @@ fun main() {
     val env = System.getenv()
     val factory = ConsumerProducerFactory(AivenConfig.default)
     val topicForInfotygdendringer = env.getValue("TOPIC_FOR_INFOTYGDENDRINGER")
-    startApplication(RapidApplication.create(env, factory, meterRegistry), topicForInfotygdendringer, factory, hikariConfig, env)
+
+    val producer = when {
+        env["HINDRE_UTSENDING"].toBoolean() -> InfotrygdendringProducer.TomProducer()
+        else -> InfotrygdendringProducer.RapidProducer(topicForInfotygdendringer, factory.createProducer(withShutdownHook = true))
+    }
+    val infotrygdendringutsending = Infotrygdendringutsender(producer)
+
+    startApplication(RapidApplication.create(env, factory, meterRegistry), infotrygdendringutsending, hikariConfig, env)
 }
 
-internal fun startApplication(rapidsConnection: RapidsConnection, topicForInfotygdendringer: String, factory: ConsumerProducerFactory, hikariConfig: HikariConfig, env: Map<String, String>): RapidsConnection {
+internal fun startApplication(rapidsConnection: RapidsConnection, infotrygdendringutsender: Infotrygdendringutsender, hikariConfig: HikariConfig, env: Map<String, String>): RapidsConnection {
     val dataSourceInitializer = DataSourceInitializer(hikariConfig)
     val repo = PostgresRepository(dataSourceInitializer::dataSource)
 
@@ -59,8 +68,50 @@ internal fun startApplication(rapidsConnection: RapidsConnection, topicForInfoty
     return rapidsConnection.apply {
         register(dataSourceInitializer)
         InfotrygdhendelseRiver(this, repo, speedClient)
-        Puls(this, repo, topicForInfotygdendringer, factory)
+        Puls(this, repo, infotrygdendringutsender)
     }.also { it.start() }
+}
+
+class Infotrygdendringutsender(
+    private val producer: InfotrygdendringProducer
+) {
+    fun startUtsending() = Utsendingskø(producer)
+    fun utsending(block: Utsendingskø.() -> Unit) {
+        startUtsending().use {
+            block(it)
+        }
+    }
+}
+
+class Utsendingskø(private val producer: InfotrygdendringProducer) : AutoCloseable {
+    fun sendEndringsmelding(fnr: String, melding: String) {
+        producer.sendEndringsmelding(fnr, melding)
+    }
+
+    override fun close() {
+        producer.tømKø()
+    }
+}
+
+interface InfotrygdendringProducer {
+    fun sendEndringsmelding(fnr: String, melding: String)
+    fun tømKø()
+
+    class TomProducer : InfotrygdendringProducer {
+        override fun sendEndringsmelding(fnr: String, melding: String) {
+            log.info("Sender IKKE endringsmelding videre fordi applikasjonen er konfigurert til å stoppe utsendinger.")
+        }
+        override fun tømKø() {}
+    }
+    class RapidProducer(val topic: String, val kafkaProducer: KafkaProducer<String, String>) : InfotrygdendringProducer {
+        override fun sendEndringsmelding(fnr: String, melding: String) {
+            kafkaProducer.send(ProducerRecord(topic, fnr, melding))
+        }
+
+        override fun tømKø() {
+            kafkaProducer.flush()
+        }
+    }
 }
 
 private class DataSourceInitializer(private val hikariConfig: HikariConfig) : RapidsConnection.StatusListener {

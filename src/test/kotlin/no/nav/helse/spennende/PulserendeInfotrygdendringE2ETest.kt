@@ -36,47 +36,28 @@ internal class PulserendeInfotrygdendringE2ETest {
 
     private lateinit var dataSource: TestDataSource
     private val speedClient = mockk<SpeedClient>()
-    private val sendteMeldinger = mutableListOf<ProducerRecord<String, String>>()
+    private lateinit var endringsmeldingProducer: TestEndringsmeldingProducer
+    private val sendteMeldinger get() = endringsmeldingProducer.sendteMeldinger
+
     @BeforeEach
     fun setup() {
         rapid.reset()
-        sendteMeldinger.clear()
+        endringsmeldingProducer = TestEndringsmeldingProducer()
         dataSource = databaseContainer.nyTilkobling()
         val repository = PostgresRepository { dataSource.ds }
         InfotrygdhendelseRiver(rapid, repository, speedClient)
 
-        val fabrikk = mockk<ConsumerProducerFactory>()
-        every { fabrikk.createProducer(any(), any()) } returns lagMockProducer()
-        Puls(rapid, repository, "tulletopic", fabrikk)
+        Puls(rapid, repository, Infotrygdendringutsender(endringsmeldingProducer))
     }
 
-    private fun lagMockProducer(): KafkaProducer<String, String> {
-        val mockProducer = mockk<KafkaProducer<String, String>>()
+    private class TestEndringsmeldingProducer : InfotrygdendringProducer {
+        val sendteMeldinger = mutableListOf<Pair<String, String>>()
 
-        every { mockProducer.flush() } just Runs
-        every { mockProducer.close() } just Runs
-        every { mockProducer.send(capture(sendteMeldinger)) } returns object : Future<RecordMetadata> {
-            override fun cancel(mayInterruptIfRunning: Boolean): Boolean {
-                TODO("Not yet implemented")
-            }
-
-            override fun isCancelled(): Boolean {
-                TODO("Not yet implemented")
-            }
-
-            override fun isDone(): Boolean {
-                TODO("Not yet implemented")
-            }
-
-            override fun get(): RecordMetadata? {
-                TODO("Not yet implemented")
-            }
-
-            override fun get(timeout: Long, unit: TimeUnit): RecordMetadata? {
-                TODO("Not yet implemented")
-            }
+        override fun sendEndringsmelding(fnr: String, melding: String) {
+            sendteMeldinger.add(fnr to melding)
         }
-        return mockProducer
+
+        override fun tømKø() {}
     }
 
     @AfterEach
@@ -182,7 +163,7 @@ internal class PulserendeInfotrygdendringE2ETest {
     }
 
     private fun assertSendInfotrygdendringVedLøsning(fnr: String = fødselsnummer, aktørId: String = aktør) {
-        val sisteMelding = jacksonObjectMapper().readTree(sendteMeldinger.last().value())
+        val sisteMelding = jacksonObjectMapper().readTree(sendteMeldinger.last().second)
         assertSendtInfotrygdendring(sisteMelding, fnr, aktørId)
     }
 

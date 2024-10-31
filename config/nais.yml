@@ -63,3 +63,5 @@ spec:
       value: EARLIEST
     - name: TOPIC_FOR_INFOTYGDENDRINGER
       value: tbd.teknisk.v1
+    - name: HINDRE_UTSENDING
+      value: "true"
