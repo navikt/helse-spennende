@@ -4,12 +4,15 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import com.github.navikt.tbd_libs.kafka.AivenConfig
-import com.github.navikt.tbd_libs.kafka.AivenConfig.Companion
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import io.micrometer.core.instrument.Clock
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.prometheus.metrics.model.registry.PrometheusRegistry
 import no.nav.helse.rapids_rivers.RapidApplication
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
@@ -17,6 +20,7 @@ import java.net.http.HttpClient
 import java.time.Duration
 import javax.sql.DataSource
 
+val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT, PrometheusRegistry.defaultRegistry, Clock.SYSTEM)
 private val log = LoggerFactory.getLogger("no.nav.helse.spennende.App")
 
 private val hikariConfig by lazy {
@@ -41,7 +45,7 @@ fun main() {
     val env = System.getenv()
     val factory = ConsumerProducerFactory(AivenConfig.default)
     val topicForInfotygdendringer = env.getValue("TOPIC_FOR_INFOTYGDENDRINGER")
-    startApplication(RapidApplication.create(env, factory), topicForInfotygdendringer, factory, hikariConfig, env)
+    startApplication(RapidApplication.create(env, factory, meterRegistry), topicForInfotygdendringer, factory, hikariConfig, env)
 }
 
 internal fun startApplication(rapidsConnection: RapidsConnection, topicForInfotygdendringer: String, factory: ConsumerProducerFactory, hikariConfig: HikariConfig, env: Map<String, String>): RapidsConnection {

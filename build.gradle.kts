@@ -27,7 +27,7 @@ val tbdLibsVersion = "2024.10.29-14.02-d0686476"
 val mockkVersion = "1.13.12"
 
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2024082715011724763661.50d7efb40f0f")
+    implementation("com.github.navikt:rapids-and-rivers:2024103107451730357158.c7f281c8bc12")
 
     implementation("org.postgresql:postgresql:42.7.2")
     implementation("com.zaxxer:HikariCP:$hikariVersion")

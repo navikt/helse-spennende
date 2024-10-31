@@ -7,11 +7,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.retry.retryBlocking
 import com.github.navikt.tbd_libs.speed.SpeedClient
-import io.micrometer.core.instrument.Clock
 import io.micrometer.core.instrument.Counter
-import io.micrometer.prometheusmetrics.PrometheusConfig
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import io.prometheus.metrics.model.registry.PrometheusRegistry
 import net.logstash.logback.argument.StructuredArguments
 import org.slf4j.LoggerFactory
 
@@ -39,6 +35,7 @@ internal class InfotrygdhendelseRiver(
         val hendelseId = packet["after.HENDELSE_ID"].asText().trim().toLong()
         val fnr = packet["after.F_NR"].asText().trim()
         try {
+            sikkerlogg.info("henter gjeldende identer for fnr $fnr")
             val identer = retryBlocking { speedClient.hentFødselsnummerOgAktørId(fnr) }
 
             val endringsmeldingId = repo.lagreEndringsmelding(identer, hendelseId, packet.toJson())
@@ -47,7 +44,7 @@ internal class InfotrygdhendelseRiver(
             Counter.builder("infotrygdendringer")
                 .description("Teller alle innkommende infotrygdendringer, og angir tabellnavn")
                 .tag("tabellnavn", packet["after.TABELLNAVN"].asText())
-                .register(PrometheusMeterRegistry(PrometheusConfig.DEFAULT, PrometheusRegistry.defaultRegistry, Clock.SYSTEM))
+                .register(meterRegistry)
                 .increment()
         } catch (err: Exception) {
             sikkerlogg.error("Feil ved lagring av endringsmelding for {} {}: {}",
