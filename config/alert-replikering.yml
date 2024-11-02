@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: spennende-replikering-alert
+  namespace: tbd
+  labels:
+    team: tbd
+spec:
+  groups:
+    - name: spennende-replikering-alert
+      rules:
+        - alert: Ingen Infotrygd-replikeringer mottatt i minst 10 minutter
+          # hour() >= 7 and hour() < 17: Sikrer at regelen kun gjelder mellom kl. 07:00 og 17:00.
+          # day_of_week() >= 1 and day_of_week() <= 5: Begrensning til mandag-fredag (1 = mandag, 5 = fredag).
+          expr: |
+            sum(increase(infotrygdendringer_total{app="spennende", namespace="tbd"}[10m])) == 0
+            and hour() >= 7 and hour() < 17 
+            and day_of_week() >= 1 and day_of_week() <= 5
+          # Varsel utløses kun dersom metrikken har vært 0 i minst 10 minutter.
+          for: 10m
+          annotations:
+            beskrivelse: |-
+              Hvis det saksbehandles og replikering er nede må det tas stilling til om Speil eller Infotrygd skal stoppe saksbehandling.
+              Kommenter ut `KAFKA_EXTRA_TOPIC` i spedisjon sin prod.yml. Dette vil sørge for at inntaket av IM og søknader stopper opp.
+            detaljer: "Sjekk om du ser noe rart på <https://grafana.nav.cloud.nais.io/d/a66ahZ0Wk/alt-i-ett-dashboard?orgId=1&refresh=1m&viewPanel=174|grafana>"
+          labels:
+            namespace: tbd
+            severity: critical
+            team_spleiselaget_alerts: slack
+            alert_type: custom

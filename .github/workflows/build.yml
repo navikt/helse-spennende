@@ -45,7 +45,7 @@ jobs:
         uses: nais/deploy/actions/deploy@v2
         env:
           APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
-          RESOURCE: config/nais.yml,config/aiven.yml,config/infotrygd-replikering.yml
+          RESOURCE: config/nais.yml,config/aiven.yml,config/infotrygd-replikering.yml,config/alert-replikering.yml
           IMAGE: ${{ needs.build.outputs.image }}
           CLUSTER: ${{ matrix.cluster }}
           VARS: config/${{ matrix.cluster }}.yml
