@@ -23,7 +23,7 @@ val flywayVersion = "10.8.1"
 val hikariVersion = "5.1.0"
 val kotliqueryVersion = "1.9.0"
 val junitJupiterVersion = "5.10.2"
-val tbdLibsVersion = "2024.10.29-14.02-d0686476"
+val tbdLibsVersion = "2024.11.04-10.59-471dcd41"
 val mockkVersion = "1.13.12"
 
 dependencies {
