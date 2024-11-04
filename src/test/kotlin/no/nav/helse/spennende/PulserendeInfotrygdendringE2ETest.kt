@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.contains
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
+import com.github.navikt.tbd_libs.result_object.ok
 import com.github.navikt.tbd_libs.speed.IdentResponse
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.github.navikt.tbd_libs.test_support.TestDataSource
@@ -74,7 +75,7 @@ internal class PulserendeInfotrygdendringE2ETest {
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
-        )
+        ).ok()
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
         assertEquals(0, sendteMeldinger.size)
@@ -95,7 +96,7 @@ internal class PulserendeInfotrygdendringE2ETest {
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
-        )
+        ).ok()
         rapid.sendTestMessage(createTestMessage(hendelseId1))
         rapid.sendTestMessage(createTestMessage(hendelseId2))
         rapid.sendTestMessage(createTestMessage(hendelseId3))
@@ -122,19 +123,19 @@ internal class PulserendeInfotrygdendringE2ETest {
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
-        )
+        ).ok()
         every { speedClient.hentFødselsnummerOgAktørId(ident = "2", any()) } returns IdentResponse(
             fødselsnummer = "2",
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
-        )
+        ).ok()
         every { speedClient.hentFødselsnummerOgAktørId(ident = "3", any()) } returns IdentResponse(
             fødselsnummer = "3",
             aktørId = aktør,
             npid = null,
             kilde = IdentResponse.KildeResponse.PDL
-        )
+        ).ok()
 
         rapid.sendTestMessage(createTestMessage(hendelseId1, fnr = "1"))
         rapid.sendTestMessage(createTestMessage(hendelseId2, fnr = "2"))
