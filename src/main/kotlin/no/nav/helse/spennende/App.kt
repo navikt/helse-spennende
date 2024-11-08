@@ -106,7 +106,7 @@ interface InfotrygdendringProducer {
     }
     class RapidProducer(val topic: String, val kafkaProducer: KafkaProducer<String, String>, meterRegistry: PrometheusMeterRegistry) : InfotrygdendringProducer {
         private val publiserteEndringer = Counter.builder("publiserte_infotrygdendringer")
-            .description("Antall infotrygdendringer sendt videre på rapid etter at fnr er mappet til aktørId")
+            .description("Antall infotrygdendringer sendt videre på rapid")
             .register(meterRegistry)
 
         override fun sendEndringsmelding(fnr: String, melding: String) {

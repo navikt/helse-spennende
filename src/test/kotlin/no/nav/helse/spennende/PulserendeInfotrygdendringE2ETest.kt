@@ -3,27 +3,19 @@ package no.nav.helse.spennende
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.contains
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import com.github.navikt.tbd_libs.result_object.ok
 import com.github.navikt.tbd_libs.speed.IdentResponse
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import com.github.navikt.tbd_libs.test_support.TestDataSource
-import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import kotliquery.queryOf
 import kotliquery.sessionOf
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.clients.producer.RecordMetadata
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import java.util.concurrent.Future
-import java.util.concurrent.TimeUnit
 
 
 internal class PulserendeInfotrygdendringE2ETest {
@@ -172,7 +164,6 @@ internal class PulserendeInfotrygdendringE2ETest {
         Assertions.assertTrue(utgående.contains("@id"))
         assertEquals("infotrygdendring", utgående.path("@event_name").asText())
         assertEquals(fnr, utgående.path("fødselsnummer").asText())
-        assertEquals(aktørId, utgående.path("aktørId").asText())
     }
 
     private fun setEndringsmeldingTilForfall(hendelseId: Long) {

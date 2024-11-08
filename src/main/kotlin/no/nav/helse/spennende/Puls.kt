@@ -38,7 +38,6 @@ internal class Puls(
             try {
                 val message = JsonMessage.newMessage("infotrygdendring", mapOf(
                     "fødselsnummer" to melding.fnr,
-                    "aktørId" to melding.aktørId,
                     "endringsmeldingId" to melding.endringsmeldingId
                 ))
                 val utgående = message.toJson()
