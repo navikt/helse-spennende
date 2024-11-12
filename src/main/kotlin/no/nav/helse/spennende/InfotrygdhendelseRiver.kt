@@ -3,12 +3,14 @@ package no.nav.helse.spennende
 import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers.River
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.retry.retryBlocking
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import net.logstash.logback.argument.StructuredArguments
 import org.slf4j.LoggerFactory
 
@@ -32,7 +34,7 @@ internal class InfotrygdhendelseRiver(
         }.register(this)
     }
 
-    override fun onPacket(packet: JsonMessage, context: MessageContext) {
+    override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
         val hendelseId = packet["after.HENDELSE_ID"].asText().trim().toLong()
         val fnr = packet["after.F_NR"].asText().trim()
         try {
@@ -59,7 +61,7 @@ internal class InfotrygdhendelseRiver(
         }
     }
 
-    override fun onError(problems: MessageProblems, context: MessageContext) {
+    override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
         sikkerlogg.info("forstod ikke infotrygdendring:\n${problems.toExtendedReport()}")
     }
 

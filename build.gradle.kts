@@ -23,11 +23,12 @@ val flywayVersion = "10.8.1"
 val hikariVersion = "5.1.0"
 val kotliqueryVersion = "1.9.0"
 val junitJupiterVersion = "5.11.3"
-val tbdLibsVersion = "2024.11.04-14.04-cfd83570"
+val tbdLibsVersion = "2024.11.12-11.09-16cf2599"
 val mockkVersion = "1.13.12"
+val rapidsAndRiversVersion = "2024111211071731406062.648687519469"
 
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2024103107451730357158.c7f281c8bc12")
+    implementation("com.github.navikt:rapids-and-rivers:$rapidsAndRiversVersion")
 
     implementation("org.postgresql:postgresql:42.7.2")
     implementation("com.zaxxer:HikariCP:$hikariVersion")
