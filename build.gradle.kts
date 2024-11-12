@@ -22,7 +22,7 @@ repositories {
 val flywayVersion = "10.8.1"
 val hikariVersion = "5.1.0"
 val kotliqueryVersion = "1.9.0"
-val junitJupiterVersion = "5.10.2"
+val junitJupiterVersion = "5.11.3"
 val tbdLibsVersion = "2024.11.04-14.04-cfd83570"
 val mockkVersion = "1.13.12"
 
