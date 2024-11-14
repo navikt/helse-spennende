@@ -25,11 +25,12 @@ internal class InfotrygdhendelseRiver(
     }
     init {
         River(rapidsConnection).apply {
+            precondition {
+                it.forbid("@event_name", "@behov")
+                it.requireKey("after.F_NR")
+            }
             validate {
-                it.rejectKey("@event_name", "@behov")
-                it.demandKey("after.F_NR")
-                it.requireKey("table", "op_type", "op_ts", "current_ts", "pos",
-                    "after.HENDELSE_ID", "after.TABELLNAVN")
+                it.requireKey("table", "op_type", "op_ts", "current_ts", "pos", "after.HENDELSE_ID", "after.TABELLNAVN")
             }
         }.register(this)
     }

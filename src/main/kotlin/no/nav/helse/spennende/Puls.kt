@@ -20,10 +20,10 @@ internal class Puls(
 
     init {
         River(rapidsConnection)
-            .validate { it.demandValue("@event_name", "minutt") }
+            .precondition { it.requireValue("@event_name", "minutt") }
             .register(this)
         River(rapidsConnection)
-            .validate { it.demandValue("@event_name", "kjør_spennende") }
+            .precondition { it.requireValue("@event_name", "kjør_spennende") }
             .register(this)
     }
 
