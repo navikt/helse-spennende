@@ -19,7 +19,8 @@ import org.slf4j.LoggerFactory
 internal class InfotrygdhendelseRiver(
     rapidsConnection: RapidsConnection,
     val repo: PostgresRepository,
-    val speedClient: SpeedClient
+    val speedClient: SpeedClient,
+    private val infotrygdendringutsender: Infotrygdendringutsender
 ) : River.PacketListener {
 
     private companion object {
@@ -51,7 +52,7 @@ internal class InfotrygdhendelseRiver(
             }
 
             val forfallstidspunkt = now().plus(nesteForfallUtsettelse)
-            val endringsmeldingId = repo.lagreEndringsmelding(identer, hendelseId, packet.toJson(), forfallstidspunkt)
+            val (harVentendeEndringsmeldinger, endringsmeldingId) = repo.lagreEndringsmelding(identer, hendelseId, packet.toJson(), forfallstidspunkt)
             sikkerlogg.info("leste infotrygdendring som ble lagret med endringsmeldingId $endringsmeldingId for fnr $fnr")
 
             Counter.builder("infotrygdendringer")
@@ -59,6 +60,18 @@ internal class InfotrygdhendelseRiver(
                 .tag("tabellnavn", packet["after.TABELLNAVN"].asText())
                 .register(meterRegistry)
                 .increment()
+
+            if (!harVentendeEndringsmeldinger) {
+                val message = JsonMessage.newMessage("infotrygdendring", mapOf(
+                    "fødselsnummer" to identer.fødselsnummer,
+                    "endringsmeldingId" to endringsmeldingId
+                ))
+                val utgående = message.toJson()
+                sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr fordi vedkommende ikke har ventende endringsmeldinger fra før")
+                infotrygdendringutsender.utsending {
+                    sendEndringsmelding(identer.fødselsnummer, utgående)
+                }
+            }
         } catch (err: Exception) {
             sikkerlogg.error("Feil ved lagring av endringsmelding for {} {}: {}",
                 StructuredArguments.keyValue("hendelse_id", hendelseId),

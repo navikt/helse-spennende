@@ -68,7 +68,7 @@ internal fun startApplication(rapidsConnection: RapidsConnection, infotrygdendri
 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
-        InfotrygdhendelseRiver(this, repo, speedClient)
+        InfotrygdhendelseRiver(this, repo, speedClient, infotrygdendringutsender)
         Puls(this, repo, infotrygdendringutsender)
     }.also { it.start() }
 }

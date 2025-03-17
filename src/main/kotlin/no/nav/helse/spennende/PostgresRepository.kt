@@ -42,6 +42,15 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             WHERE person_id = :personId  
             AND sendt is NULL AND id <= :endringsmeldingId
         """
+
+        @Language("PostgreSQL")
+        private const val USENDTE_ENDRINGSMELDINGER = """
+            select exists(
+                select 1 from endringsmelding 
+                WHERE person_id = (SELECT id FROM person WHERE fnr = :fnr limit 1)  
+                AND sendt is NULL
+            )
+        """
     }
 
     private val dataSource by lazy(dataSourceGetter)
@@ -96,18 +105,28 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             )).asUpdate) > 0
     }
 
-    internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime): Long =
+    internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime): Pair<Boolean, Long> =
         requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json, forfallstidspunkt)) { "kunne ikke inserte endringsmelding eller person" }
+
+    private fun Session.harVentendeEndringsmeldinger(fnr: String): Boolean {
+        return run(queryOf(USENDTE_ENDRINGSMELDINGER, mapOf("fnr" to fnr)).map {
+            it.boolean(1)
+        }.asSingle)!!
+    }
 
     private fun lagreEndringsmeldingOgReturnerId(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime) =
         sessionOf(dataSource, returnGeneratedKey = true).use { session ->
             sikrePersonFinnes(session, identer)
+            val harVentendeEndringsmeldinger = session.harVentendeEndringsmeldinger(identer.fødselsnummer)
+
             session.run(queryOf(INSERT_ENDRINGSMELDING, mapOf(
                 "fnr" to identer.fødselsnummer,
                 "hendelseId" to hendelseId,
                 "melding" to json,
                 "neste_forfallstidspunkt" to forfallstidspunkt
-            )).asUpdateAndReturnGeneratedKey)
+            )).asUpdateAndReturnGeneratedKey)?.let {
+                harVentendeEndringsmeldinger to it
+            }
         }
 
     private fun sikrePersonFinnes(session: Session, identer: IdentResponse) {

@@ -38,9 +38,9 @@ internal class PulserendeInfotrygdendringE2ETest {
         endringsmeldingProducer = TestEndringsmeldingProducer()
         dataSource = databaseContainer.nyTilkobling()
         val repository = PostgresRepository { dataSource.ds }
-        InfotrygdhendelseRiver(rapid, repository, speedClient)
-
-        Puls(rapid, repository, Infotrygdendringutsender(endringsmeldingProducer))
+        val infotrygdendringutsender = Infotrygdendringutsender(endringsmeldingProducer)
+        InfotrygdhendelseRiver(rapid, repository, speedClient, infotrygdendringutsender)
+        Puls(rapid, repository, infotrygdendringutsender)
     }
 
     private class TestEndringsmeldingProducer : InfotrygdendringProducer {
@@ -70,11 +70,11 @@ internal class PulserendeInfotrygdendringE2ETest {
         ).ok()
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
-        assertEquals(0, sendteMeldinger.size)
+        assertEquals(1, sendteMeldinger.size)
 
         setEndringsmeldingTilForfall(hendelseId)
         puls()
-        assertEquals(1, sendteMeldinger.size)
+        assertEquals(2, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning()
     }
 
@@ -90,17 +90,19 @@ internal class PulserendeInfotrygdendringE2ETest {
             kilde = IdentResponse.KildeResponse.PDL
         ).ok()
         rapid.sendTestMessage(createTestMessage(hendelseId1))
+        assertEquals(1, sendteMeldinger.size)
         rapid.sendTestMessage(createTestMessage(hendelseId2))
+        assertEquals(1, sendteMeldinger.size)
         rapid.sendTestMessage(createTestMessage(hendelseId3))
         puls()
-        assertEquals(0, sendteMeldinger.size)
+        assertEquals(1, sendteMeldinger.size)
         setEndringsmeldingTilForfall(hendelseId1)
         setEndringsmeldingTilForfall(hendelseId2)
         puls()
-        assertEquals(0, sendteMeldinger.size)
+        assertEquals(1, sendteMeldinger.size)
         setEndringsmeldingTilForfall(hendelseId3)
         puls()
-        assertEquals(1, sendteMeldinger.size)
+        assertEquals(2, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning()
     }
 
@@ -130,24 +132,27 @@ internal class PulserendeInfotrygdendringE2ETest {
         ).ok()
 
         rapid.sendTestMessage(createTestMessage(hendelseId1, fnr = "1"))
+        assertEquals(1, sendteMeldinger.size)
         rapid.sendTestMessage(createTestMessage(hendelseId2, fnr = "2"))
+        assertEquals(2, sendteMeldinger.size)
         rapid.sendTestMessage(createTestMessage(hendelseId3, fnr = "3"))
+        assertEquals(3, sendteMeldinger.size)
         puls()
-        assertEquals(0, sendteMeldinger.size)
+        assertEquals(3, sendteMeldinger.size)
 
         setEndringsmeldingTilForfall(hendelseId1)
         puls()
-        assertEquals(1, sendteMeldinger.size)
+        assertEquals(4, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning(fnr = "1")
 
         setEndringsmeldingTilForfall(hendelseId2)
         puls()
-        assertEquals(2, sendteMeldinger.size)
+        assertEquals(5, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning(fnr = "2")
 
         setEndringsmeldingTilForfall(hendelseId3)
         puls()
-        assertEquals(3, sendteMeldinger.size)
+        assertEquals(6, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning(fnr = "3")
     }
 
