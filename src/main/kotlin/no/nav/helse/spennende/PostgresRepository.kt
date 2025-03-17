@@ -1,24 +1,20 @@
 package no.nav.helse.spennende
 
 import com.github.navikt.tbd_libs.speed.IdentResponse
+import java.time.LocalDateTime
+import java.time.LocalDateTime.now
+import javax.sql.DataSource
 import kotliquery.Session
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
 import kotliquery.sessionOf
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
-import java.time.Duration
-import java.time.LocalDateTime.now
-import java.time.temporal.ChronoUnit
-import javax.sql.DataSource
 
 internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     private companion object {
         private val publiclog = LoggerFactory.getLogger(PostgresRepository::class.java)
         private val logger = LoggerFactory.getLogger("tjenestekall")
-
-        private val nesteForfallUtsettelse = Duration.ofMinutes(3)
-        private val nesteForfallstidspunkt get() = now().truncatedTo(ChronoUnit.MINUTES) + nesteForfallUtsettelse
 
         @Language("PostgreSQL")
         private const val INSERT_PERSON = """INSERT INTO person (fnr) VALUES (:fnr) ON CONFLICT(fnr) DO NOTHING"""
@@ -100,17 +96,17 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             )).asUpdate) > 0
     }
 
-    internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String): Long =
-        requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json)) { "kunne ikke inserte endringsmelding eller person" }
+    internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime): Long =
+        requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json, forfallstidspunkt)) { "kunne ikke inserte endringsmelding eller person" }
 
-    private fun lagreEndringsmeldingOgReturnerId(identer: IdentResponse, hendelseId: Long, json: String) =
+    private fun lagreEndringsmeldingOgReturnerId(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime) =
         sessionOf(dataSource, returnGeneratedKey = true).use { session ->
             sikrePersonFinnes(session, identer)
             session.run(queryOf(INSERT_ENDRINGSMELDING, mapOf(
                 "fnr" to identer.fødselsnummer,
                 "hendelseId" to hendelseId,
                 "melding" to json,
-                "neste_forfallstidspunkt" to nesteForfallstidspunkt
+                "neste_forfallstidspunkt" to forfallstidspunkt
             )).asUpdateAndReturnGeneratedKey)
         }
 

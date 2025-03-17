@@ -11,6 +11,8 @@ import com.github.navikt.tbd_libs.retry.retryBlocking
 import com.github.navikt.tbd_libs.speed.SpeedClient
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
+import java.time.Duration
+import java.time.LocalDateTime.now
 import net.logstash.logback.argument.StructuredArguments
 import org.slf4j.LoggerFactory
 
@@ -22,6 +24,7 @@ internal class InfotrygdhendelseRiver(
 
     private companion object {
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
+        private val nesteForfallUtsettelse = Duration.ofSeconds(30)
     }
     init {
         River(rapidsConnection).apply {
@@ -47,7 +50,8 @@ internal class InfotrygdhendelseRiver(
                 }
             }
 
-            val endringsmeldingId = repo.lagreEndringsmelding(identer, hendelseId, packet.toJson())
+            val forfallstidspunkt = now().plus(nesteForfallUtsettelse)
+            val endringsmeldingId = repo.lagreEndringsmelding(identer, hendelseId, packet.toJson(), forfallstidspunkt)
             sikkerlogg.info("leste infotrygdendring som ble lagret med endringsmeldingId $endringsmeldingId for fnr $fnr")
 
             Counter.builder("infotrygdendringer")
