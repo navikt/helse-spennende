@@ -39,12 +39,13 @@ jobs:
           - dev-gcp
           - prod-gcp
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - name: deploy
         uses: nais/deploy/actions/deploy@v2
         env:
-          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
           RESOURCE: config/nais.yml,config/aiven.yml,config/infotrygd-replikering.yml,config/alert-replikering.yml
           IMAGE: ${{ needs.build.outputs.image }}
           CLUSTER: ${{ matrix.cluster }}
