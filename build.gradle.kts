@@ -23,9 +23,9 @@ val flywayVersion = "11.5.0"
 val hikariCPVersion = "6.3.0"
 val kotliqueryVersion = "1.9.0"
 val junitJupiterVersion = "5.12.1"
-val tbdLibsVersion = "2025.03.30-14.11-a91ce546"
+val tbdLibsVersion = "2025.08.07-09.55-15719a86"
 val mockkVersion = "1.13.17"
-val rapidsAndRiversVersion = "2025061811051750237542.df739400e55e"
+val rapidsAndRiversVersion = "2025080710011754553680.051be9b54ef9"
 val postgresqlVersion = "42.7.5"
 
 dependencies {
