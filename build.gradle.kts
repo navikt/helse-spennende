@@ -25,7 +25,7 @@ val kotliqueryVersion = "1.9.0"
 val junitJupiterVersion = "5.12.1"
 val tbdLibsVersion = "2025.11.04-10.12-3a167132"
 val mockkVersion = "1.13.17"
-val rapidsAndRiversVersion = "2025110410191762247980.5e0592e08597"
+val rapidsAndRiversVersion = "2026011411051768385145.e8ebad1177b4"
 val postgresqlVersion = "42.7.7"
 
 dependencies {
