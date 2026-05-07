@@ -48,8 +48,14 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             select exists(
                 select 1 from endringsmelding 
                 WHERE person_id = (SELECT id FROM person WHERE fnr = :fnr limit 1)  
-                AND sendt is NULL
+                AND (sendt is NULL or sendt > now() - interval '30 seconds')
             )
+        """
+
+        @Language("PostgreSQL")
+        private const val MARKER_ENDRINGSMELDING_SOM_SENDT = """
+            UPDATE endringsmelding set sendt = :naavaerendeTidspunkt
+            where id = :id
         """
     }
 
@@ -108,7 +114,13 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime): Pair<Boolean, Long> =
         requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json, forfallstidspunkt)) { "kunne ikke inserte endringsmelding eller person" }
 
-    private fun Session.harVentendeEndringsmeldinger(fnr: String): Boolean {
+    internal fun markerEndringsmeldingSomSendt(endringsmeldingId: Long) {
+        sessionOf(dataSource).use { session ->
+            session.run(queryOf(MARKER_ENDRINGSMELDING_SOM_SENDT, mapOf("id" to endringsmeldingId, "naavaerendeTidspunkt" to now())).asUpdate)
+        }
+    }
+
+    private fun Session.harVentendeEllerNyligSendteEndringsmeldinger(fnr: String): Boolean {
         return run(queryOf(USENDTE_ENDRINGSMELDINGER, mapOf("fnr" to fnr)).map {
             it.boolean(1)
         }.asSingle)!!
@@ -117,7 +129,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     private fun lagreEndringsmeldingOgReturnerId(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime) =
         sessionOf(dataSource, returnGeneratedKey = true).use { session ->
             sikrePersonFinnes(session, identer)
-            val harVentendeEndringsmeldinger = session.harVentendeEndringsmeldinger(identer.fødselsnummer)
+            val harVentendeEndringsmeldinger = session.harVentendeEllerNyligSendteEndringsmeldinger(identer.fødselsnummer)
 
             session.run(queryOf(INSERT_ENDRINGSMELDING, mapOf(
                 "fnr" to identer.fødselsnummer,
