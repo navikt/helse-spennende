@@ -71,7 +71,6 @@ internal class InfotrygdhendelseRiver(
                 infotrygdendringutsender.utsending {
                     sendEndringsmelding(identer.fødselsnummer, utgående)
                 }
-                repo.markerEndringsmeldingSomSendt(endringsmeldingId)
             }
         } catch (err: Exception) {
             sikkerlogg.error("Feil ved lagring av endringsmelding for {} {}: {}",

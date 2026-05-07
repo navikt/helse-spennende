@@ -60,7 +60,7 @@ internal class PulserendeInfotrygdendringE2ETest {
     }
 
     @Test
-    fun `publiserer en endring på samme person en gang uten delay og ingen flere ganger`() {
+    fun `publiserer endring først etter fem minutter`() {
         val hendelseId = 1234567L
         every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
             fødselsnummer = fødselsnummer,
@@ -69,18 +69,17 @@ internal class PulserendeInfotrygdendringE2ETest {
             kilde = IdentResponse.KildeResponse.PDL
         ).ok()
         rapid.sendTestMessage(createTestMessage(hendelseId))
-        assertEquals(1, sendteMeldinger.size)
         puls()
         assertEquals(1, sendteMeldinger.size)
 
         setEndringsmeldingTilForfall(hendelseId)
         puls()
-        assertEquals(1, sendteMeldinger.size)
+        assertEquals(2, sendteMeldinger.size)
         assertSendInfotrygdendringVedLøsning()
     }
 
     @Test
-    fun `flere infotrygdendringer på samme person gir først en infotrygdendringsmelding uten delay, så en når alle er mottatt og har forfalt`() {
+    fun `flere infotrygdendringer på samme person`() {
         val hendelseId1 = 1234567L
         val hendelseId2 = 2234567L
         val hendelseId3 = 3234567L
@@ -108,7 +107,7 @@ internal class PulserendeInfotrygdendringE2ETest {
     }
 
     @Test
-    fun `en infotrygdendring per person gir bare en infotrygdendringsmelding per person`() {
+    fun `flere infotrygdendringer på ulike personer`() {
         val hendelseId1 = 1234567L
         val hendelseId2 = 2234567L
         val hendelseId3 = 3234567L
@@ -134,30 +133,27 @@ internal class PulserendeInfotrygdendringE2ETest {
 
         rapid.sendTestMessage(createTestMessage(hendelseId1, fnr = "1"))
         assertEquals(1, sendteMeldinger.size)
-        assertSendInfotrygdendringVedLøsning(fnr = "1")
-
         rapid.sendTestMessage(createTestMessage(hendelseId2, fnr = "2"))
         assertEquals(2, sendteMeldinger.size)
-        assertSendInfotrygdendringVedLøsning(fnr = "2")
-
         rapid.sendTestMessage(createTestMessage(hendelseId3, fnr = "3"))
         assertEquals(3, sendteMeldinger.size)
-        assertSendInfotrygdendringVedLøsning(fnr = "3")
-
         puls()
         assertEquals(3, sendteMeldinger.size)
 
         setEndringsmeldingTilForfall(hendelseId1)
         puls()
-        assertEquals(3, sendteMeldinger.size)
+        assertEquals(4, sendteMeldinger.size)
+        assertSendInfotrygdendringVedLøsning(fnr = "1")
 
         setEndringsmeldingTilForfall(hendelseId2)
         puls()
-        assertEquals(3, sendteMeldinger.size)
+        assertEquals(5, sendteMeldinger.size)
+        assertSendInfotrygdendringVedLøsning(fnr = "2")
 
         setEndringsmeldingTilForfall(hendelseId3)
         puls()
-        assertEquals(3, sendteMeldinger.size)
+        assertEquals(6, sendteMeldinger.size)
+        assertSendInfotrygdendringVedLøsning(fnr = "3")
     }
 
     private fun puls() {

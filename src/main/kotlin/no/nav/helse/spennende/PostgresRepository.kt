@@ -45,22 +45,11 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
         @Language("PostgreSQL")
         private const val USENDTE_ENDRINGSMELDINGER = """
-            select (exists(
+            select exists(
                 select 1 from endringsmelding 
                 WHERE person_id = (SELECT id FROM person WHERE fnr = :fnr limit 1)  
-                AND (sendt is NULL)
-            ) or exists (
-                select 1 from endringsmelding 
-                WHERE person_id = (SELECT id FROM person WHERE fnr = :fnr limit 1)  
-                AND (sendt > now() - interval '30 seconds')
-                )
+                AND sendt is NULL
             )
-        """
-
-        @Language("PostgreSQL")
-        private const val MARKER_ENDRINGSMELDING_SOM_SENDT = """
-            UPDATE endringsmelding set sendt = :naavaerendeTidspunkt
-            where id = :id
         """
     }
 
@@ -119,13 +108,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime): Pair<Boolean, Long> =
         requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json, forfallstidspunkt)) { "kunne ikke inserte endringsmelding eller person" }
 
-    internal fun markerEndringsmeldingSomSendt(endringsmeldingId: Long) {
-        sessionOf(dataSource).use { session ->
-            session.run(queryOf(MARKER_ENDRINGSMELDING_SOM_SENDT, mapOf("id" to endringsmeldingId, "naavaerendeTidspunkt" to now())).asUpdate)
-        }
-    }
-
-    private fun Session.harVentendeEllerNyligSendteEndringsmeldinger(fnr: String): Boolean {
+    private fun Session.harVentendeEndringsmeldinger(fnr: String): Boolean {
         return run(queryOf(USENDTE_ENDRINGSMELDINGER, mapOf("fnr" to fnr)).map {
             it.boolean(1)
         }.asSingle)!!
@@ -134,7 +117,7 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     private fun lagreEndringsmeldingOgReturnerId(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime) =
         sessionOf(dataSource, returnGeneratedKey = true).use { session ->
             sikrePersonFinnes(session, identer)
-            val harVentendeEndringsmeldinger = session.harVentendeEllerNyligSendteEndringsmeldinger(identer.fødselsnummer)
+            val harVentendeEndringsmeldinger = session.harVentendeEndringsmeldinger(identer.fødselsnummer)
 
             session.run(queryOf(INSERT_ENDRINGSMELDING, mapOf(
                 "fnr" to identer.fødselsnummer,
