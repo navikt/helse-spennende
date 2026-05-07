@@ -45,10 +45,15 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
 
         @Language("PostgreSQL")
         private const val USENDTE_ENDRINGSMELDINGER = """
-            select exists(
+            select (exists(
                 select 1 from endringsmelding 
                 WHERE person_id = (SELECT id FROM person WHERE fnr = :fnr limit 1)  
-                AND (sendt is NULL or sendt > now() - interval '30 seconds')
+                AND (sendt is NULL)
+            ) or exists (
+                select 1 from endringsmelding 
+                WHERE person_id = (SELECT id FROM person WHERE fnr = :fnr limit 1)  
+                AND (sendt > now() - interval '30 seconds')
+                )
             )
         """
 
