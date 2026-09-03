@@ -43,7 +43,6 @@ internal class Puls(
                     "endringsmeldingId" to melding.endringsmeldingId
                 ))
                 val utgående = message.toJson()
-                //sikkerlogg.info("Viderepubliserer infotrygdmelding for endringsmeldingId $endringsmeldingId med fnr $fnr")
                 kø.sendEndringsmelding(melding.fnr, utgående)
             } catch (err: Exception) {
                 publiclog.error("Klarte ikke hente ident for endringsmelding: ${err.message}", err)
