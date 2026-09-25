@@ -9,15 +9,18 @@ spec:
   groups:
     - name: spennende-replikering-alert
       rules:
-        - alert: Ingen Infotrygd-replikeringer mottatt i minst 10 minutter
-          # hour() >= 7 and hour() < 17: Sikrer at regelen kun gjelder mellom kl. 07:00 og 17:00.
+        - alert: Ingen Infotrygd-replikeringer mottatt i minst 15 minutter
+          # Prometheus evaluerer hour() i UTC. Oslo er UTC+1 om vinteren og UTC+2 om sommeren (sommertid),
+          # men vinduet 07-16 lokal vintertid og 08-17 lokal sommertid tilsvarer begge UTC 06-15,
+          # så hour() >= 6 and hour() < 15 dekker riktig lokalt tidsrom hele året uten DST-håndtering.
           # day_of_week() >= 1 and day_of_week() <= 5: Begrensning til mandag-fredag (1 = mandag, 5 = fredag).
           expr: |
-            sum(increase(infotrygdendringer_total{app="spennende", namespace="tbd"}[10m])) == 0
-            and hour() >= 7 and hour() < 17 
+            sum(increase(infotrygdendringer_total{app="spennende", namespace="tbd"}[15m])) == 0
+            and hour() >= 6 and hour() < 15
             and day_of_week() >= 1 and day_of_week() <= 5
-          # Varsel utløses kun dersom metrikken har vært 0 i minst 10 minutter.
-          for: 10m
+          # increase(...[15m]) fanger allerede opp at metrikken har vært 0 i 15 minutter,
+          # så "for" settes til 0m for å unngå at vi legger enda en forsinkelse på toppen (ellers 15m+10m = 25m før varsling).
+          for: 0m
           annotations:
             beskrivelse: |-
               Hvis det saksbehandles og replikering er nede må det tas stilling til om Speil eller Infotrygd skal stoppe saksbehandling.
@@ -26,5 +29,5 @@ spec:
           labels:
             namespace: tbd
             severity: critical
-            team_spleiselaget_alerts: slack
+            team_sas_alerts: slack
             alert_type: custom
