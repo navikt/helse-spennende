@@ -1,0 +1,25 @@
+spec:
+  azure:
+    application:
+      tenant: nav.no
+  gcp:
+    sqlInstances:
+      - type: POSTGRES_17
+        name: spennende
+        diskAutoresize: true
+        diskSize: 10
+        diskType: SSD
+        tier: db-custom-1-3840
+        databases:
+          - name: spennende
+        flags:
+          - name: cloudsql.enable_pgaudit
+            value: "on"
+          - name: pgaudit.log
+            value: "write,ddl,role"
+          - name: pgaudit.log_parameter
+            value: "on"
+          - name: pgaudit.log_relation
+            value: "on"
+  kafka:
+    pool: nav-prod

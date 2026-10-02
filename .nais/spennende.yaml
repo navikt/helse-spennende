@@ -6,7 +6,6 @@ metadata:
   labels:
     team: tbd
 spec:
-  image: {{image}}
   strategy:
     type: Recreate
   liveness:
@@ -39,28 +38,6 @@ spec:
   azure:
     application:
       enabled: true
-      tenant: {{tenant}}
-  gcp:
-    sqlInstances:
-      - type: POSTGRES_17
-        name: spennende
-        diskAutoresize: true
-        diskSize: 10
-        diskType: SSD
-        tier: {{sqlInstancesTier}}
-        databases:
-          - name: spennende
-        flags:
-          - name: cloudsql.enable_pgaudit
-            value: "{{pgAudit}}"
-          - name: pgaudit.log
-            value: "write,ddl,role"
-          - name: pgaudit.log_parameter
-            value: "on"
-          - name: pgaudit.log_relation
-            value: "on"
-  kafka:
-    pool: {{kafkaPool}}
   env:
     - name: KAFKA_CONSUMER_GROUP_ID
       value: tbd-spennende-v1

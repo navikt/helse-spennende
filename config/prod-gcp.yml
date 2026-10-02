@@ -1,6 +1,0 @@
-kafkaPool: nav-prod
-pgAudit: on
-retentionHours: 3600
-replikeringSecretName: kafka-infotrygd-replikering-nav-prod-6p5gs
-sqlInstancesTier: db-custom-1-3840
-tenant: nav.no

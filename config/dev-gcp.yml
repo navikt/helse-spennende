@@ -1,6 +1,0 @@
-kafkaPool: nav-dev
-pgAudit: off
-retentionHours: 120
-replikeringSecretName: kafka-infotrygd-replikering-nav-dev-6p5gs
-sqlInstancesTier: db-f1-micro
-tenant: trygdeetaten.no

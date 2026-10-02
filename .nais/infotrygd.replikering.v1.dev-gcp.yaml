@@ -1,0 +1,4 @@
+spec:
+  pool: nav-dev
+  config:
+    retentionHours: 120  # -1 means unlimited

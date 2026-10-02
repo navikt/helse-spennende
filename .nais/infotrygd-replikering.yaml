@@ -5,7 +5,4 @@ metadata:
   name: infotrygd-replikering
   namespace: tbd
 spec:
-  kafka:
-    pool: {{kafkaPool}}
-  secretName: {{replikeringSecretName}}
   protected: true

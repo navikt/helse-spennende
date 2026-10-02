@@ -1,0 +1,4 @@
+spec:
+  kafka:
+    pool: nav-dev
+  secretName: kafka-infotrygd-replikering-nav-dev-6p5gs
