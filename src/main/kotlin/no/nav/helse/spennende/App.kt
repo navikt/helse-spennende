@@ -1,7 +1,5 @@
 package no.nav.helse.spennende
 
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import com.github.navikt.tbd_libs.kafka.AivenConfig
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
@@ -19,6 +17,7 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.net.http.HttpClient
 import java.time.Duration
 import javax.sql.DataSource
@@ -64,7 +63,7 @@ internal fun startApplication(rapidsConnection: RapidsConnection, infotrygdendri
 
     val httpClient: HttpClient = HttpClient.newHttpClient()
     val azureClient = createAzureTokenClientFromEnvironment(env)
-    val speedClient = SpeedClient(httpClient, jacksonObjectMapper().registerModule(JavaTimeModule()), azureClient)
+    val speedClient = SpeedClient(httpClient, jacksonObjectMapper(), azureClient)
 
     return rapidsConnection.apply {
         register(dataSourceInitializer)
