@@ -1,8 +1,5 @@
 package no.nav.helse.spennende
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.contains
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import com.github.navikt.tbd_libs.result_object.ok
 import com.github.navikt.tbd_libs.speed.IdentResponse
@@ -16,6 +13,9 @@ import kotliquery.sessionOf
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
+import tools.jackson.databind.JsonNode
+import tools.jackson.module.kotlin.contains
+import tools.jackson.module.kotlin.jacksonObjectMapper
 
 
 internal class PulserendeInfotrygdendringE2ETest {
@@ -167,8 +167,8 @@ internal class PulserendeInfotrygdendringE2ETest {
 
     private fun assertSendtInfotrygdendring(utgående: JsonNode, fnr: String, aktørId: String) {
         Assertions.assertTrue(utgående.contains("@id"))
-        assertEquals("infotrygdendring", utgående.path("@event_name").asText())
-        assertEquals(fnr, utgående.path("fødselsnummer").asText())
+        assertEquals("infotrygdendring", utgående.path("@event_name").asString())
+        assertEquals(fnr, utgående.path("fødselsnummer").asString())
     }
 
     private fun setEndringsmeldingTilForfall(hendelseId: Long) {
