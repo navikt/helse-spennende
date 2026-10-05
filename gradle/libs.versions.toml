@@ -1,6 +1,6 @@
 [versions]
 flyway = "13.8.0"
-tbdLibs = "20261002.1227"
+tbdLibs = "20261005.1432"
 sykepengerGradlePlugins = "20261001.1830"
 
 [libraries]
