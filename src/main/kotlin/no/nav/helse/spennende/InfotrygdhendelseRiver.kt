@@ -40,8 +40,8 @@ internal class InfotrygdhendelseRiver(
     }
 
     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
-        val hendelseId = packet["after.HENDELSE_ID"].asText().trim().toLong()
-        val fnr = packet["after.F_NR"].asText().trim()
+        val hendelseId = packet["after.HENDELSE_ID"].asString().trim().toLong()
+        val fnr = packet["after.F_NR"].asString().trim()
         try {
             sikkerlogg.info("henter gjeldende identer for fnr $fnr")
             val identer = retryBlocking {
@@ -57,7 +57,7 @@ internal class InfotrygdhendelseRiver(
 
             Counter.builder("infotrygdendringer")
                 .description("Teller alle innkommende infotrygdendringer, og angir tabellnavn")
-                .tag("tabellnavn", packet["after.TABELLNAVN"].asText())
+                .tag("tabellnavn", packet["after.TABELLNAVN"].asString())
                 .register(meterRegistry)
                 .increment()
 
