@@ -1,25 +1,29 @@
 package no.nav.helse.spennende
 
 import com.github.navikt.tbd_libs.speed.IdentResponse
-import java.time.LocalDateTime
-import java.time.LocalDateTime.now
-import javax.sql.DataSource
 import kotliquery.Session
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
 import kotliquery.sessionOf
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
+import java.time.LocalDateTime
+import java.time.LocalDateTime.now
+import javax.sql.DataSource
 
-internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
+internal class PostgresRepository(
+    dataSourceGetter: () -> DataSource,
+) {
     private companion object {
         private val publiclog = LoggerFactory.getLogger(PostgresRepository::class.java)
         private val logger = LoggerFactory.getLogger("tjenestekall")
 
         @Language("PostgreSQL")
         private const val INSERT_PERSON = """INSERT INTO person (fnr) VALUES (:fnr) ON CONFLICT(fnr) DO NOTHING"""
+
         @Language("PostgreSQL")
         private const val INSERT_ENDRINGSMELDING = """INSERT INTO endringsmelding (person_id, hendelse_id, innkommende_melding, neste_forfallstidspunkt) VALUES ((SELECT id FROM person WHERE fnr = :fnr), :hendelseId, :melding, :neste_forfallstidspunkt)"""
+
         @Language("PostgreSQL")
         private const val FINN_SENDEKLARE_ENDRINGSMELDINGER = """
             WITH alleIkkeSendteEndringsmeldinger AS (
@@ -65,26 +69,24 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
             run(
                 queryOf(
                     FINN_SENDEKLARE_ENDRINGSMELDINGER,
-                    mapOf("naavaerendeTidspunkt" to now())
+                    mapOf("naavaerendeTidspunkt" to now()),
                 ).map { row ->
                     SendeklarEndringsmelding(
                         row.long("person_id"),
                         row.string("fnr"),
-                        row.long("siste_endringsmelding_id")
+                        row.long("siste_endringsmelding_id"),
                     )
-                }.asList)
-                .also {
-                    if (!it.isEmpty()){
-                        publiclog.info("Skal sende ${it.size} endringsmeldinger")
-                        logger.info("Skal sende ${it.size} endringsmeldinger")
-                    }
+                }.asList,
+            ).also {
+                if (!it.isEmpty()) {
+                    publiclog.info("Skal sende ${it.size} endringsmeldinger")
+                    logger.info("Skal sende ${it.size} endringsmeldinger")
                 }
-                .onEach { block(it) }
+            }.onEach { block(it) }
                 .onEach {
                     it.markerEndringsmeldingerSomSendt(this)
-                }
-                .also {
-                    if (!it.isEmpty()){
+                }.also {
+                    if (!it.isEmpty()) {
                         publiclog.info("Har håndtert ${it.size} endringsmeldinger")
                         logger.info("Har håndtert ${it.size} endringsmeldinger")
                     }
@@ -95,43 +97,72 @@ internal class PostgresRepository(dataSourceGetter: () -> DataSource) {
     internal class SendeklarEndringsmelding(
         private val personId: Long,
         val fnr: String,
-        val endringsmeldingId: Long
+        val endringsmeldingId: Long,
     ) {
         internal fun markerEndringsmeldingerSomSendt(session: TransactionalSession) =
-            session.run(queryOf(MARKER_ENDRINGSMELDINGER_SOM_SENDT, mapOf(
-                "personId" to personId,
-                "endringsmeldingId" to endringsmeldingId,
-                "naavaerendeTidspunkt" to now()
-            )).asUpdate) > 0
+            session.run(
+                queryOf(
+                    MARKER_ENDRINGSMELDINGER_SOM_SENDT,
+                    mapOf(
+                        "personId" to personId,
+                        "endringsmeldingId" to endringsmeldingId,
+                        "naavaerendeTidspunkt" to now(),
+                    ),
+                ).asUpdate,
+            ) > 0
     }
 
-    internal fun lagreEndringsmelding(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime): Pair<Boolean, Long> =
-        requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json, forfallstidspunkt)) { "kunne ikke inserte endringsmelding eller person" }
+    internal fun lagreEndringsmelding(
+        identer: IdentResponse,
+        hendelseId: Long,
+        json: String,
+        forfallstidspunkt: LocalDateTime,
+    ): Pair<Boolean, Long> = requireNotNull(lagreEndringsmeldingOgReturnerId(identer, hendelseId, json, forfallstidspunkt)) { "kunne ikke inserte endringsmelding eller person" }
 
-    private fun Session.harVentendeEndringsmeldinger(fnr: String): Boolean {
-        return run(queryOf(USENDTE_ENDRINGSMELDINGER, mapOf("fnr" to fnr)).map {
-            it.boolean(1)
-        }.asSingle)!!
-    }
+    private fun Session.harVentendeEndringsmeldinger(fnr: String): Boolean =
+        run(
+            queryOf(USENDTE_ENDRINGSMELDINGER, mapOf("fnr" to fnr))
+                .map {
+                    it.boolean(1)
+                }.asSingle,
+        )!!
 
-    private fun lagreEndringsmeldingOgReturnerId(identer: IdentResponse, hendelseId: Long, json: String, forfallstidspunkt: LocalDateTime) =
-        sessionOf(dataSource, returnGeneratedKey = true).use { session ->
-            sikrePersonFinnes(session, identer)
-            val harVentendeEndringsmeldinger = session.harVentendeEndringsmeldinger(identer.fødselsnummer)
+    private fun lagreEndringsmeldingOgReturnerId(
+        identer: IdentResponse,
+        hendelseId: Long,
+        json: String,
+        forfallstidspunkt: LocalDateTime,
+    ) = sessionOf(dataSource, returnGeneratedKey = true).use { session ->
+        sikrePersonFinnes(session, identer)
+        val harVentendeEndringsmeldinger = session.harVentendeEndringsmeldinger(identer.fødselsnummer)
 
-            session.run(queryOf(INSERT_ENDRINGSMELDING, mapOf(
-                "fnr" to identer.fødselsnummer,
-                "hendelseId" to hendelseId,
-                "melding" to json,
-                "neste_forfallstidspunkt" to forfallstidspunkt
-            )).asUpdateAndReturnGeneratedKey)?.let {
+        session
+            .run(
+                queryOf(
+                    INSERT_ENDRINGSMELDING,
+                    mapOf(
+                        "fnr" to identer.fødselsnummer,
+                        "hendelseId" to hendelseId,
+                        "melding" to json,
+                        "neste_forfallstidspunkt" to forfallstidspunkt,
+                    ),
+                ).asUpdateAndReturnGeneratedKey,
+            )?.let {
                 harVentendeEndringsmeldinger to it
             }
-        }
+    }
 
-    private fun sikrePersonFinnes(session: Session, identer: IdentResponse) {
-        session.run(queryOf(INSERT_PERSON, mapOf(
-            "fnr" to identer.fødselsnummer
-        )).asExecute)
+    private fun sikrePersonFinnes(
+        session: Session,
+        identer: IdentResponse,
+    ) {
+        session.run(
+            queryOf(
+                INSERT_PERSON,
+                mapOf(
+                    "fnr" to identer.fødselsnummer,
+                ),
+            ).asExecute,
+        )
     }
 }

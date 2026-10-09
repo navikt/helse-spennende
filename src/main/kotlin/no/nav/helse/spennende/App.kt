@@ -28,13 +28,14 @@ private val log = LoggerFactory.getLogger("no.nav.helse.spennende.App")
 private val hikariConfig by lazy {
     val env = System.getenv()
     HikariConfig().apply {
-        jdbcUrl = String.format(
-            "jdbc:postgresql://%s:%s/%s?user=%s",
-            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_HOST"),
-            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PORT"),
-            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_DATABASE"),
-            env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_USERNAME")
-        )
+        jdbcUrl =
+            String.format(
+                "jdbc:postgresql://%s:%s/%s?user=%s",
+                env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_HOST"),
+                env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PORT"),
+                env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_DATABASE"),
+                env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_USERNAME"),
+            )
         password = env.getValue("NAIS_DATABASE_SPENNENDE_SPENNENDE_PASSWORD")
         maximumPoolSize = 2
         connectionTimeout = Duration.ofSeconds(5).toMillis()
@@ -48,16 +49,22 @@ fun main() {
     val factory = ConsumerProducerFactory(AivenConfig.default)
     val topicForInfotygdendringer = env.getValue("TOPIC_FOR_INFOTYGDENDRINGER")
 
-    val producer = when {
-        env["HINDRE_UTSENDING"].toBoolean() -> InfotrygdendringProducer.TomProducer()
-        else -> InfotrygdendringProducer.RapidProducer(topicForInfotygdendringer, factory.createProducer(withShutdownHook = true), meterRegistry)
-    }
+    val producer =
+        when {
+            env["HINDRE_UTSENDING"].toBoolean() -> InfotrygdendringProducer.TomProducer()
+            else -> InfotrygdendringProducer.RapidProducer(topicForInfotygdendringer, factory.createProducer(withShutdownHook = true), meterRegistry)
+        }
     val infotrygdendringutsending = Infotrygdendringutsender(producer)
 
     startApplication(RapidApplication.create(env, factory, meterRegistry), infotrygdendringutsending, hikariConfig, env)
 }
 
-internal fun startApplication(rapidsConnection: RapidsConnection, infotrygdendringutsender: Infotrygdendringutsender, hikariConfig: HikariConfig, env: Map<String, String>): RapidsConnection {
+internal fun startApplication(
+    rapidsConnection: RapidsConnection,
+    infotrygdendringutsender: Infotrygdendringutsender,
+    hikariConfig: HikariConfig,
+    env: Map<String, String>,
+): RapidsConnection {
     val dataSourceInitializer = DataSourceInitializer(hikariConfig)
     val repo = PostgresRepository(dataSourceInitializer::dataSource)
 
@@ -65,17 +72,19 @@ internal fun startApplication(rapidsConnection: RapidsConnection, infotrygdendri
     val azureClient = createAzureTokenClientFromEnvironment(env)
     val speedClient = SpeedClient(httpClient, jacksonObjectMapper(), azureClient)
 
-    return rapidsConnection.apply {
-        register(dataSourceInitializer)
-        InfotrygdhendelseRiver(this, repo, speedClient, infotrygdendringutsender)
-        Puls(this, repo, infotrygdendringutsender)
-    }.also { it.start() }
+    return rapidsConnection
+        .apply {
+            register(dataSourceInitializer)
+            InfotrygdhendelseRiver(this, repo, speedClient, infotrygdendringutsender)
+            Puls(this, repo, infotrygdendringutsender)
+        }.also { it.start() }
 }
 
 class Infotrygdendringutsender(
-    private val producer: InfotrygdendringProducer
+    private val producer: InfotrygdendringProducer,
 ) {
     fun startUtsending() = Utsendingskø(producer)
+
     fun utsending(block: Utsendingskø.() -> Unit) {
         startUtsending().use {
             block(it)
@@ -83,8 +92,13 @@ class Infotrygdendringutsender(
     }
 }
 
-class Utsendingskø(private val producer: InfotrygdendringProducer) : AutoCloseable {
-    fun sendEndringsmelding(fnr: String, melding: String) {
+class Utsendingskø(
+    private val producer: InfotrygdendringProducer,
+) : AutoCloseable {
+    fun sendEndringsmelding(
+        fnr: String,
+        melding: String,
+    ) {
         producer.sendEndringsmelding(fnr, melding)
     }
 
@@ -94,21 +108,39 @@ class Utsendingskø(private val producer: InfotrygdendringProducer) : AutoClosea
 }
 
 interface InfotrygdendringProducer {
-    fun sendEndringsmelding(fnr: String, melding: String)
+    fun sendEndringsmelding(
+        fnr: String,
+        melding: String,
+    )
+
     fun tømKø()
 
     class TomProducer : InfotrygdendringProducer {
-        override fun sendEndringsmelding(fnr: String, melding: String) {
+        override fun sendEndringsmelding(
+            fnr: String,
+            melding: String,
+        ) {
             log.info("Sender IKKE endringsmelding videre fordi applikasjonen er konfigurert til å stoppe utsendinger.")
         }
+
         override fun tømKø() {}
     }
-    class RapidProducer(val topic: String, val kafkaProducer: KafkaProducer<String, String>, meterRegistry: PrometheusMeterRegistry) : InfotrygdendringProducer {
-        private val publiserteEndringer = Counter.builder("publiserte_infotrygdendringer")
-            .description("Antall infotrygdendringer sendt videre på rapid")
-            .register(meterRegistry)
 
-        override fun sendEndringsmelding(fnr: String, melding: String) {
+    class RapidProducer(
+        val topic: String,
+        val kafkaProducer: KafkaProducer<String, String>,
+        meterRegistry: PrometheusMeterRegistry,
+    ) : InfotrygdendringProducer {
+        private val publiserteEndringer =
+            Counter
+                .builder("publiserte_infotrygdendringer")
+                .description("Antall infotrygdendringer sendt videre på rapid")
+                .register(meterRegistry)
+
+        override fun sendEndringsmelding(
+            fnr: String,
+            melding: String,
+        ) {
             publiserteEndringer.increment()
             kafkaProducer.send(ProducerRecord(topic, fnr, melding))
         }
@@ -119,7 +151,9 @@ interface InfotrygdendringProducer {
     }
 }
 
-private class DataSourceInitializer(private val hikariConfig: HikariConfig) : RapidsConnection.StatusListener {
+private class DataSourceInitializer(
+    private val hikariConfig: HikariConfig,
+) : RapidsConnection.StatusListener {
     internal val dataSource: DataSource by lazy { HikariDataSource(hikariConfig) }
 
     override fun onStartup(rapidsConnection: RapidsConnection) {

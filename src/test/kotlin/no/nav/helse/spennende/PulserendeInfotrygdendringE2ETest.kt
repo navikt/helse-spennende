@@ -17,9 +17,7 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.module.kotlin.contains
 import tools.jackson.module.kotlin.jacksonObjectMapper
 
-
 internal class PulserendeInfotrygdendringE2ETest {
-
     private val rapid = TestRapid()
 
     private companion object {
@@ -46,7 +44,10 @@ internal class PulserendeInfotrygdendringE2ETest {
     private class TestEndringsmeldingProducer : InfotrygdendringProducer {
         val sendteMeldinger = mutableListOf<Pair<String, String>>()
 
-        override fun sendEndringsmelding(fnr: String, melding: String) {
+        override fun sendEndringsmelding(
+            fnr: String,
+            melding: String,
+        ) {
             sendteMeldinger.add(fnr to melding)
         }
 
@@ -62,12 +63,13 @@ internal class PulserendeInfotrygdendringE2ETest {
     @Test
     fun `publiserer endring først etter fem minutter`() {
         val hendelseId = 1234567L
-        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
-            fødselsnummer = fødselsnummer,
-            aktørId = aktør,
-            npid = null,
-            kilde = IdentResponse.KildeResponse.PDL
-        ).ok()
+        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns
+            IdentResponse(
+                fødselsnummer = fødselsnummer,
+                aktørId = aktør,
+                npid = null,
+                kilde = IdentResponse.KildeResponse.PDL,
+            ).ok()
         rapid.sendTestMessage(createTestMessage(hendelseId))
         puls()
         assertEquals(1, sendteMeldinger.size)
@@ -83,12 +85,13 @@ internal class PulserendeInfotrygdendringE2ETest {
         val hendelseId1 = 1234567L
         val hendelseId2 = 2234567L
         val hendelseId3 = 3234567L
-        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns IdentResponse(
-            fødselsnummer = fødselsnummer,
-            aktørId = aktør,
-            npid = null,
-            kilde = IdentResponse.KildeResponse.PDL
-        ).ok()
+        every { speedClient.hentFødselsnummerOgAktørId(ident = fødselsnummer, any()) } returns
+            IdentResponse(
+                fødselsnummer = fødselsnummer,
+                aktørId = aktør,
+                npid = null,
+                kilde = IdentResponse.KildeResponse.PDL,
+            ).ok()
         rapid.sendTestMessage(createTestMessage(hendelseId1))
         assertEquals(1, sendteMeldinger.size)
         rapid.sendTestMessage(createTestMessage(hendelseId2))
@@ -112,24 +115,27 @@ internal class PulserendeInfotrygdendringE2ETest {
         val hendelseId2 = 2234567L
         val hendelseId3 = 3234567L
 
-        every { speedClient.hentFødselsnummerOgAktørId(ident = "1", any()) } returns IdentResponse(
-            fødselsnummer = "1",
-            aktørId = aktør,
-            npid = null,
-            kilde = IdentResponse.KildeResponse.PDL
-        ).ok()
-        every { speedClient.hentFødselsnummerOgAktørId(ident = "2", any()) } returns IdentResponse(
-            fødselsnummer = "2",
-            aktørId = aktør,
-            npid = null,
-            kilde = IdentResponse.KildeResponse.PDL
-        ).ok()
-        every { speedClient.hentFødselsnummerOgAktørId(ident = "3", any()) } returns IdentResponse(
-            fødselsnummer = "3",
-            aktørId = aktør,
-            npid = null,
-            kilde = IdentResponse.KildeResponse.PDL
-        ).ok()
+        every { speedClient.hentFødselsnummerOgAktørId(ident = "1", any()) } returns
+            IdentResponse(
+                fødselsnummer = "1",
+                aktørId = aktør,
+                npid = null,
+                kilde = IdentResponse.KildeResponse.PDL,
+            ).ok()
+        every { speedClient.hentFødselsnummerOgAktørId(ident = "2", any()) } returns
+            IdentResponse(
+                fødselsnummer = "2",
+                aktørId = aktør,
+                npid = null,
+                kilde = IdentResponse.KildeResponse.PDL,
+            ).ok()
+        every { speedClient.hentFødselsnummerOgAktørId(ident = "3", any()) } returns
+            IdentResponse(
+                fødselsnummer = "3",
+                aktørId = aktør,
+                npid = null,
+                kilde = IdentResponse.KildeResponse.PDL,
+            ).ok()
 
         rapid.sendTestMessage(createTestMessage(hendelseId1, fnr = "1"))
         assertEquals(1, sendteMeldinger.size)
@@ -160,12 +166,19 @@ internal class PulserendeInfotrygdendringE2ETest {
         rapid.sendTestMessage("""{"@event_name": "minutt"}""")
     }
 
-    private fun assertSendInfotrygdendringVedLøsning(fnr: String = fødselsnummer, aktørId: String = aktør) {
+    private fun assertSendInfotrygdendringVedLøsning(
+        fnr: String = fødselsnummer,
+        aktørId: String = aktør,
+    ) {
         val sisteMelding = jacksonObjectMapper().readTree(sendteMeldinger.last().second)
         assertSendtInfotrygdendring(sisteMelding, fnr, aktørId)
     }
 
-    private fun assertSendtInfotrygdendring(utgående: JsonNode, fnr: String, aktørId: String) {
+    private fun assertSendtInfotrygdendring(
+        utgående: JsonNode,
+        fnr: String,
+        aktørId: String,
+    ) {
         Assertions.assertTrue(utgående.contains("@id"))
         assertEquals("infotrygdendring", utgående.path("@event_name").asString())
         assertEquals(fnr, utgående.path("fødselsnummer").asString())
@@ -183,9 +196,11 @@ internal class PulserendeInfotrygdendringE2ETest {
         }
     }
 
-
     @Language("JSON")
-    private fun createTestMessage(hendelseId: Long = 12345678, fnr: String = fødselsnummer) = """{
+    private fun createTestMessage(
+        hendelseId: Long = 12345678,
+        fnr: String = fødselsnummer,
+    ) = """{
   "table": "INFOTRYGD_Q1.TIL_VL_HENDELSE_SP",
   "op_type": "I",
   "op_ts": "2022-03-29 12:54:11.000000",

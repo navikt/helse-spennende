@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
 internal class Puls(
     rapidsConnection: RapidsConnection,
     val repo: PostgresRepository,
-    val infotrygdendringutsender: Infotrygdendringutsender
+    val infotrygdendringutsender: Infotrygdendringutsender,
 ) : River.PacketListener {
     private companion object {
         private val publiclog = LoggerFactory.getLogger(Puls::class.java)
@@ -27,21 +27,33 @@ internal class Puls(
             .register(this)
     }
 
-    override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+    override fun onPacket(
+        packet: JsonMessage,
+        context: MessageContext,
+        metadata: MessageMetadata,
+        meterRegistry: MeterRegistry,
+    ) {
         infotrygdendringutsender.utsending {
             pulser(this, context)
         }
     }
 
-    private fun pulser(kø: Utsendingskø, context: MessageContext) {
+    private fun pulser(
+        kø: Utsendingskø,
+        context: MessageContext,
+    ) {
         publiclog.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
         logger.info("Pulserer, sjekker for sendeklare infotrygdendringsmeldinger")
         repo.hentSendeklareEndringsmeldinger { melding ->
             try {
-                val message = JsonMessage.newMessage("infotrygdendring", mapOf(
-                    "fødselsnummer" to melding.fnr,
-                    "endringsmeldingId" to melding.endringsmeldingId
-                ))
+                val message =
+                    JsonMessage.newMessage(
+                        "infotrygdendring",
+                        mapOf(
+                            "fødselsnummer" to melding.fnr,
+                            "endringsmeldingId" to melding.endringsmeldingId,
+                        ),
+                    )
                 val utgående = message.toJson()
                 kø.sendEndringsmelding(melding.fnr, utgående)
             } catch (err: Exception) {
