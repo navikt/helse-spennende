@@ -1,7 +1,7 @@
 [versions]
 flyway = "13.10.3"
 tbdLibs = "20261013.1613"
-sykepengerGradlePlugins = "20261013.1718"
+sykepengerGradlePlugins = "20261026.1611"
 
 [libraries]
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
