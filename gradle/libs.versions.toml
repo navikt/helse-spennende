@@ -10,7 +10,7 @@ kotliquery = "com.github.seratch:kotliquery:1.9.1"
 mockk = "io.mockk:mockk:1.14.11"
 postgresql = "org.postgresql:postgresql:42.7.14"
 
-rapidsAndRivers = "com.github.navikt:rapids-and-rivers:2026091610031789545782"
+rapidsAndRivers = "com.github.navikt:rapids-and-rivers:2026110308421793691732"
 
 tbdLibs-azureTokenClientDefault = { module = "com.github.navikt.tbd-libs:azure-token-client-default", version.ref = "tbdLibs" }
 tbdLibs-postgresTestdatabaser = { module = "com.github.navikt.tbd-libs:postgres-testdatabaser", version.ref = "tbdLibs" }
